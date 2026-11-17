@@ -49,6 +49,15 @@ type Service struct {
 	Log      *slog.Logger
 }
 
+// ErrPolicyNotFound indicates that the requested policy no longer exists.
+var ErrPolicyNotFound = errors.New("certificate policy not found; refresh the domain and choose an existing policy")
+
+// ErrPolicyDisabled indicates that issuance and deployment are disabled for a policy.
+var ErrPolicyDisabled = errors.New("certificate policy is disabled; enable it before issuing or deploying")
+
+// ErrNoUpstreams indicates that a deployment has no destination.
+var ErrNoUpstreams = errors.New("no deployment upstreams configured; add a target before deploying")
+
 // Queue validates an operation against current remote policies before creating a job.
 func (s *Service) Queue(ctx context.Context, domain, policyID, action string) (store.CertificateJob, error) {
 	return s.queue(ctx, domain, policyID, action, false)
@@ -67,10 +76,10 @@ func (s *Service) queue(ctx context.Context, domain, policyID, action string, au
 		return store.CertificateJob{}, err
 	}
 	if !p.Enabled {
-		return store.CertificateJob{}, errors.New("certificate policy is disabled")
+		return store.CertificateJob{}, ErrPolicyDisabled
 	}
 	if action == "deploy" && len(p.Upstreams) == 0 {
-		return store.CertificateJob{}, errors.New("no deployment upstreams configured")
+		return store.CertificateJob{}, ErrNoUpstreams
 	}
 	key := fmt.Sprintf("%x", sha256.Sum256([]byte(domain+"\x00"+policyID)))
 	job, err := s.Store.EnqueueCertificate(ctx, store.CertificateJob{Domain: domain, PolicyID: policyID, Action: action, ActiveKey: &key, Automatic: automatic})
@@ -86,7 +95,7 @@ func findPolicy(domain certconfig.Domain, id string) (certconfig.Policy, error) 
 			return p, nil
 		}
 	}
-	return certconfig.Policy{}, errors.New("certificate policy not found")
+	return certconfig.Policy{}, ErrPolicyNotFound
 }
 
 func (s *Service) event(ctx context.Context, job store.CertificateJob, stage, target, message string) error {

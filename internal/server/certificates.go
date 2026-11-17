@@ -11,6 +11,7 @@ import (
 
 	"github.com/OXeu/certcenter/internal/auth"
 	"github.com/OXeu/certcenter/internal/certconfig"
+	"github.com/OXeu/certcenter/internal/certificates"
 	"github.com/OXeu/certcenter/internal/store"
 	"github.com/gin-gonic/gin"
 )
@@ -60,6 +61,12 @@ func (s *Server) authorizeDomain(c *gin.Context) (certconfig.Domain, bool) {
 
 func (s *Server) certificateError(c *gin.Context, err error) {
 	switch {
+	case errors.Is(err, certificates.ErrPolicyNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": certificates.ErrPolicyNotFound.Error()})
+	case errors.Is(err, certificates.ErrPolicyDisabled):
+		c.JSON(http.StatusBadRequest, gin.H{"error": certificates.ErrPolicyDisabled.Error()})
+	case errors.Is(err, certificates.ErrNoUpstreams):
+		c.JSON(http.StatusBadRequest, gin.H{"error": certificates.ErrNoUpstreams.Error()})
 	case errors.Is(err, certconfig.ErrMissing), errors.Is(err, store.ErrNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 	case errors.Is(err, store.ErrBusy):
@@ -130,7 +137,7 @@ func (s *Server) certificateDomain(c *gin.Context) {
 		s.certificateError(c, err)
 		return
 	}
-	certificates, err := s.store.Certificates(c.Request.Context(), domain.Name)
+	versions, err := s.store.Certificates(c.Request.Context(), domain.Name)
 	if err != nil {
 		s.certificateError(c, err)
 		return
@@ -158,7 +165,7 @@ func (s *Server) certificateDomain(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"domain": domain, "version": domainVersion(domain), "certificates": certificates, "jobs": jobs, "events": events, "dns_providers": dns, "upstreams": upstreams, "delegations": delegations})
+	c.JSON(http.StatusOK, gin.H{"domain": domain, "version": domainVersion(domain), "certificates": versions, "jobs": jobs, "events": events, "dns_providers": dns, "upstreams": upstreams, "delegations": delegations})
 }
 
 func (s *Server) saveCertificateDomain(c *gin.Context) {
@@ -221,11 +228,7 @@ func (s *Server) queueCertificate(c *gin.Context) {
 	}
 	job, err := s.certificates.Queue(c.Request.Context(), domain.Name, c.Param("policy"), action)
 	if err != nil {
-		if errors.Is(err, store.ErrBusy) {
-			s.certificateError(c, err)
-			return
-		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot queue operation; check certificate policy and deployment targets"})
+		s.certificateError(c, err)
 		return
 	}
 	c.JSON(http.StatusAccepted, job)

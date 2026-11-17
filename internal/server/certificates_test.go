@@ -1,7 +1,10 @@
 package server
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -17,6 +20,61 @@ import (
 	"github.com/OXeu/certcenter/internal/store"
 	"github.com/OXeu/configcenter/sdk/configcenter"
 )
+
+type unavailableCertificateQueue struct {
+	certificates.Repository
+}
+
+func (s unavailableCertificateQueue) EnqueueCertificate(context.Context, store.CertificateJob) (store.CertificateJob, error) {
+	return store.CertificateJob{}, errors.New("database unavailable: private connection detail")
+}
+
+func TestCertificateQueueExplainsPolicyFailures(t *testing.T) {
+	for _, tc := range []struct {
+		name, policy, action string
+		enabled              bool
+		upstreams            []string
+		status               int
+		message              string
+	}{
+		{"missing", "missing", "issue", true, nil, 404, certificates.ErrPolicyNotFound.Error()},
+		{"disabled", "main", "issue", false, nil, 400, certificates.ErrPolicyDisabled.Error()},
+		{"no targets", "main", "deploy", true, nil, 400, certificates.ErrNoUpstreams.Error()},
+		{"issuance without deployment", "main", "issue", true, nil, 202, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f, s := certificateFlows(t)
+			domain, err := s.cfg.Remote.Domain(t.Context(), "example.com")
+			if err != nil {
+				t.Fatal(err)
+			}
+			domain.Certificates[0].Enabled = tc.enabled
+			domain.Certificates[0].Upstreams = tc.upstreams
+			if err := s.cfg.Remote.SaveDomain(t.Context(), domain); err != nil {
+				t.Fatal(err)
+			}
+			status, body := f.do(http.MethodPost, "/api/v1/domains/example.com/certificates/"+tc.policy+"/"+tc.action, nil)
+			if status != tc.status || (tc.message != "" && body["error"] != tc.message) {
+				t.Fatalf("queue response: %d %+v", status, body)
+			}
+		})
+	}
+}
+
+func TestCertificateQueueLogsStorageFailureWithoutMisclassifyingPolicy(t *testing.T) {
+	f, s := certificateFlows(t)
+	var logs bytes.Buffer
+	s.log = slog.New(slog.NewTextHandler(&logs, nil))
+	s.certificates.Store = unavailableCertificateQueue{Repository: s.store}
+	status, body := f.do(http.MethodPost, "/api/v1/domains/example.com/certificates/main/issue", nil)
+	message, ok := body["error"].(string)
+	if status != http.StatusServiceUnavailable || !ok || !strings.Contains(message, "database connectivity") || strings.Contains(message, "private connection detail") {
+		t.Fatalf("storage failure response: %d %+v", status, body)
+	}
+	if !strings.Contains(logs.String(), "enqueue operation: database unavailable") {
+		t.Fatal("queue failure missing from server logs")
+	}
+}
 
 func certificateFlows(t *testing.T) (*flows, *Server) {
 	t.Helper()
