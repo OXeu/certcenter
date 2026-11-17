@@ -8,6 +8,7 @@ import (
 	"net/mail"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -58,6 +59,9 @@ type Upstream struct {
 	CertificatePath string `json:"certificate_path"`
 	KeyPath         string `json:"key_path"`
 	ReloadCommand   string `json:"reload_command"`
+	UpdateResources bool   `json:"update_resources"`
+	DeleteOld       bool   `json:"delete_old"`
+	ContactIDs      string `json:"contact_ids"`
 }
 
 // Domain is the ownership boundary and desired certificate policy.
@@ -190,6 +194,19 @@ func (p Providers) Validate() error {
 	for name, u := range p.Upstreams {
 		if !label.MatchString(name) {
 			return errors.New("invalid upstream name")
+		}
+		if u.DeleteOld && !u.UpdateResources {
+			return errors.New("old certificate cleanup requires cloud resource updates")
+		}
+		if u.UpdateResources && u.Kind != "tencentcloud" && u.Kind != "aliyun" {
+			return errors.New("resource updates require a cloud upstream")
+		}
+		if u.Kind == "aliyun" && u.UpdateResources {
+			for _, id := range strings.Split(u.ContactIDs, ",") {
+				if number, err := strconv.ParseInt(strings.TrimSpace(id), 10, 64); err != nil || number <= 0 {
+					return errors.New("alibaba resource updates require comma-separated contact IDs")
+				}
+			}
 		}
 		switch u.Kind {
 		case "tencentcloud", "aliyun":

@@ -32,17 +32,18 @@ type ACMEAccount struct {
 
 // CertificateJob is a durable queue entry; ActiveKey prevents overlapping policy jobs.
 type CertificateJob struct {
-	Automatic  bool       `json:"automatic"`
-	ID         uint       `gorm:"primaryKey" json:"id"`
-	Domain     string     `gorm:"index;size:253;not null" json:"domain"`
-	PolicyID   string     `gorm:"size:63;not null" json:"policy_id"`
-	Action     string     `gorm:"size:16;not null" json:"action"`
-	Status     string     `gorm:"index;size:16;not null" json:"status"`
-	ActiveKey  *string    `gorm:"uniqueIndex;size:64" json:"-"`
-	Worker     string     `gorm:"size:64" json:"-"`
-	LeaseUntil *time.Time `json:"-"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
+	Automatic   bool       `json:"automatic"`
+	ID          uint       `gorm:"primaryKey" json:"id"`
+	Domain      string     `gorm:"index;size:253;not null" json:"domain"`
+	PolicyID    string     `gorm:"size:63;not null" json:"policy_id"`
+	Action      string     `gorm:"size:16;not null" json:"action"`
+	Status      string     `gorm:"index;size:16;not null" json:"status"`
+	ActiveKey   *string    `gorm:"uniqueIndex;size:64" json:"-"`
+	Worker      string     `gorm:"size:64" json:"-"`
+	LeaseUntil  *time.Time `json:"-"`
+	AvailableAt *time.Time `json:"-"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 // CertificateEvent is a credential-free issuance or deployment audit entry.
@@ -59,12 +60,14 @@ type CertificateEvent struct {
 
 // Deployment records successful upstream uploads for retry deduplication.
 type Deployment struct {
-	Revision      string    `gorm:"uniqueIndex:deployment;size:64;not null" json:"-"`
-	ID            uint      `gorm:"primaryKey" json:"id"`
-	CertificateID uint      `gorm:"uniqueIndex:deployment;not null" json:"certificate_id"`
-	Target        string    `gorm:"uniqueIndex:deployment;size:63;not null" json:"target"`
-	RemoteID      string    `gorm:"size:255" json:"remote_id"`
-	CreatedAt     time.Time `json:"created_at"`
+	ResourcesUpdated bool      `gorm:"not null;default:false" json:"resources_updated"`
+	OldDeleted       bool      `gorm:"not null;default:false" json:"old_deleted"`
+	Revision         string    `gorm:"uniqueIndex:deployment;size:64;not null" json:"-"`
+	ID               uint      `gorm:"primaryKey" json:"id"`
+	CertificateID    uint      `gorm:"uniqueIndex:deployment;not null" json:"certificate_id"`
+	Target           string    `gorm:"uniqueIndex:deployment;size:63;not null" json:"target"`
+	RemoteID         string    `gorm:"size:255" json:"remote_id"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 // CertificateForJob recovers a version saved before a worker stopped.
@@ -123,12 +126,12 @@ func (s *Store) EnqueueCertificate(ctx context.Context, job CertificateJob) (Cer
 // ClaimCertificateJob atomically leases one queued job or one whose worker stopped.
 func (s *Store) ClaimCertificateJob(ctx context.Context, worker string, now time.Time) (CertificateJob, error) {
 	var job CertificateJob
-	err := s.db.WithContext(ctx).Where("status = ? OR (status = ? AND lease_until < ?)", "queued", "running", now).Order("id").First(&job).Error
+	err := s.db.WithContext(ctx).Where("(status = ? AND (available_at IS NULL OR available_at <= ?)) OR (status = ? AND lease_until < ?)", "queued", now, "running", now).Order("id").First(&job).Error
 	if err != nil {
 		return job, queryErr("find queued operation", err)
 	}
 	lease := now.Add(20 * time.Minute)
-	result := s.db.WithContext(ctx).Model(&CertificateJob{}).Where("id = ? AND (status = ? OR (status = ? AND lease_until < ?))", job.ID, "queued", "running", now).
+	result := s.db.WithContext(ctx).Model(&CertificateJob{}).Where("id = ? AND ((status = ? AND (available_at IS NULL OR available_at <= ?)) OR (status = ? AND lease_until < ?))", job.ID, "queued", now, "running", now).
 		Updates(map[string]any{"status": "running", "worker": worker, "lease_until": lease})
 	if result.Error != nil {
 		return job, queryErr("claim operation", result.Error)
@@ -179,9 +182,12 @@ func (s *Store) Deployments(ctx context.Context, certificateID uint) ([]Deployme
 	return out, queryErr("list deployments", err)
 }
 
-// SaveDeployment persists a successful upload without overwriting existing receipts.
+// SaveDeployment persists upload completion and resource updates without replacing the remote ID.
 func (s *Store) SaveDeployment(ctx context.Context, deployment Deployment) error {
-	err := s.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&deployment).Error
+	err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "certificate_id"}, {Name: "target"}, {Name: "revision"}},
+		DoUpdates: clause.AssignmentColumns([]string{"resources_updated", "old_deleted"}),
+	}).Create(&deployment).Error
 	if err != nil {
 		return fmt.Errorf("save deployment: %w", err)
 	}

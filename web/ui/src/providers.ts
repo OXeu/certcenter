@@ -75,6 +75,20 @@ export function createProviderWorkspace(data: PageData, page: PageContext) {
             },
           ]
         : [
+            {
+              ...makeField('update_resources', cloud),
+              help: 'providers.updateResourcesHelp',
+              options: booleanOptions(),
+            },
+            {
+              ...makeField('delete_old', cloud),
+              help: 'providers.deleteOldHelp',
+              options: booleanOptions(),
+            },
+            {
+              ...makeField('contact_ids', ['aliyun'], false),
+              help: 'providers.contactIDsHelp',
+            },
             makeField('address', ['ssh']),
             makeField('user', ['ssh']),
             makeField('private_key', ['ssh'], true, true, true),
@@ -88,6 +102,8 @@ export function createProviderWorkspace(data: PageData, page: PageContext) {
       fields.map((field) => [field.key, provider?.fields[field.key] ?? '']),
     )
     values.kind = provider?.fields.kind ?? kinds[0]
+    values.update_resources ||= 'false'
+    values.delete_old ||= 'false'
     form.show(
       page.msg(provider ? 'common.edit' : dns ? 'providers.addDNS' : 'providers.addUpstream'),
       fields,
@@ -97,7 +113,10 @@ export function createProviderWorkspace(data: PageData, page: PageContext) {
         for (const field of fields) {
           if ('kinds' in field && field.kinds.includes(form.values.kind)) {
             const value = form.values[field.key]
-            settings[field.key] = value
+            settings[field.key] =
+              field.key === 'update_resources' || field.key === 'delete_old'
+                ? value === 'true'
+                : value
           }
         }
         const name = provider?.name ?? form.values.name.trim()
@@ -110,6 +129,12 @@ export function createProviderWorkspace(data: PageData, page: PageContext) {
         notify('success', page.msg('toast.saved'))
       },
     )
+  }
+  function booleanOptions() {
+    return [
+      { value: 'false', label: page.msg('cert.no') },
+      { value: 'true', label: page.msg('cert.yes') },
+    ]
   }
   function editable(provider: Provider) {
     return provider.fields.kind !== 'acme-dns'

@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -30,6 +29,10 @@ type Repository interface {
 	AddCertificateEvent(context.Context, store.CertificateEvent) error
 	Deployments(context.Context, uint) ([]store.Deployment, error)
 	SaveDeployment(context.Context, store.Deployment) error
+	PreviousDeployments(context.Context, store.Certificate, string, string) ([]store.DeployedCertificate, error)
+	CloudUpdates(context.Context, uint) ([]store.CloudUpdate, error)
+	SaveCloudUpdate(context.Context, store.CloudUpdate) error
+	DeferCertificateJob(context.Context, store.CertificateJob, time.Time) error
 }
 
 // Settings is the live configuration interface implemented by the ConfigCenter SDK adapter.
@@ -203,53 +206,6 @@ func (s *Service) save(ctx context.Context, job store.CertificateJob, policy cer
 		return cert, fmt.Errorf("persist issued certificate: %w", err)
 	}
 	return cert, nil
-}
-
-func (s *Service) deploy(ctx context.Context, job store.CertificateJob, policy certconfig.Policy, providers certconfig.Providers, cert store.Certificate) error {
-	if !matchesPolicy(cert, policy) {
-		return errors.New("stored certificate names differ from policy; issue a new certificate first")
-	}
-	if !cert.NotAfter.After(time.Now()) {
-		return errors.New("expired certificates cannot be deployed")
-	}
-	plain, err := s.Vault.Open(cert.Domain+":"+cert.PolicyID+":"+cert.Fingerprint, cert.Material)
-	if err != nil {
-		return err
-	}
-	var material Material
-	if err := json.Unmarshal(plain, &material); err != nil {
-		return errors.New("cannot decode stored certificate")
-	}
-	deployed, err := s.Store.Deployments(ctx, cert.ID)
-	if err != nil {
-		return fmt.Errorf("load deployment receipts: %w", err)
-	}
-	var failures []error
-	for _, target := range policy.Upstreams {
-		revision := upstream.Revision(providers.Upstreams[target])
-		if job.Automatic && slices.ContainsFunc(deployed, func(d store.Deployment) bool { return d.Target == target && d.Revision == revision }) {
-			continue
-		}
-		if err := s.event(ctx, job, "deploying", target, "Uploading certificate"); err != nil {
-			return err
-		}
-		name := "certcenter-" + cert.Fingerprint[:32]
-		receipt, uploadErr := s.Upstream.Upload(ctx, providers.Upstreams[target], upstream.Bundle{Name: name, Fingerprint: cert.Fingerprint, Certificate: material.Certificate, PrivateKey: material.PrivateKey})
-		if uploadErr != nil {
-			failures = append(failures, fmt.Errorf("upstream %s: %w", target, uploadErr))
-			if err := s.event(ctx, job, "deployment_failed", target, uploadErr.Error()); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := s.Store.SaveDeployment(ctx, store.Deployment{CertificateID: cert.ID, Target: target, RemoteID: receipt, Revision: revision}); err != nil {
-			return fmt.Errorf("save upload receipt: %w", err)
-		}
-		if err := s.event(ctx, job, "deployed", target, "Upload completed: "+receipt); err != nil {
-			return err
-		}
-	}
-	return errors.Join(failures...)
 }
 
 func matchesPolicy(cert store.Certificate, policy certconfig.Policy) bool {

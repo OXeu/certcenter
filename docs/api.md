@@ -78,6 +78,8 @@ GET 返回 `{ "version": "…", "providers": [{ "name": "…", "fields": { "kind
 
 创建上游使用相同结构，把 `dns` 换为 `upstream`。DNS 类型为 `alidns`、`tencentcloud`、`cloudflare`、`acme-dns`；上游类型为 `aliyun`、`tencentcloud`、`ssh`。各类型字段见[配置指南](/docs/config)。创建成功返回 `204`，新账号随即出现在域名详情的 `dns_providers` / `upstreams` 中。
 
+云上游可提交 `update_resources: true` 启用旧证书绑定资源的更新，提交 `delete_old: true` 开启更新成功后的旧云端证书清理；两者默认 `false`，清理必须同时启用更新。阿里云更新另需字符串字段 `contact_ids`（逗号分隔的正整数 ID）。列表返回的 `fields` 仍为字符串映射，两个开关显示为 `"true"` / `"false"`，写入时需转换为 JSON 布尔值。SSH 不支持这两个开关。
+
 编辑使用 PUT，账号名称来自路径且类型不可变；提交完整的非敏感字段。`access_key`、`secret_key`、Cloudflare 的 `api_token` 和 `private_key` 留空或省略表示保留原值。内置 acme-dns 无需凭据，API 不接受 `api_base` 或 `accounts` 注册信息。已有外部 acme-dns 配置编辑时保留其原配置。`certcenter-acme-dns` 由服务器配置管理，不能通过账号管理 API 修改或删除。修改已有账号类型应新建账号后迁移策略。
 
 删除请求体为 `{ "version": "列表 GET 返回的版本" }`。删除及编辑成功返回 `204`；缺失凭据等验证错误返回 `400`，同名创建、版本过期或破坏策略引用返回 `409`。版本覆盖整个 provider 配置，另一类账号的修改也会使旧版本失效；它只能保护当前管理实例中的写入，外部 ConfigCenter 写入仍需避免并发覆盖。

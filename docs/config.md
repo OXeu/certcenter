@@ -120,6 +120,30 @@ MySQL 示例：`database_driver` 为 `mysql`，`database_dsn` 为 `user:password
 
 `accept_terms` 表示运营者已接受所选 CA 的条款；未接受时签发失败，不自动替运营者接受。默认使用 Let's Encrypt 生产目录 `https://acme-v02.api.letsencrypt.org/directory`。需要测试时可手动切换为 `https://acme-staging-v02.api.letsencrypt.org/directory`，其证书不受浏览器信任。已有配置不会被新默认值覆盖；此前使用 staging 的实例需在设置页切换为生产目录，重新签发并部署证书。不同 CA/邮箱有独立且持久的加密 ACME 账户密钥。
 
+### 云资源更新与旧证书清理
+
+云上游新增 `update_resources` 和 `delete_old` 两个布尔字段，默认均为 `false`，可在“部署上游”的编辑对话框中开启。`delete_old: true` 必须同时启用 `update_resources`。阿里云开启更新时还必须提供 `contact_ids`，填写数字证书管理服务中已有联系人 ID，多个 ID 用逗号分隔。
+
+例如，腾讯云上游可配置为：
+
+```json
+{
+  "kind": "tencentcloud",
+  "access_key": "ID",
+  "secret_key": "SECRET",
+  "update_resources": true,
+  "delete_old": true
+}
+```
+
+阿里云使用 `kind: "aliyun"` 并增加 `contact_ids: "7,8"`。首次上传仍需在云控制台把证书绑定到需要管理的资源；后续部署只更新本策略此前上传证书的现有绑定，不按域名扫描或接管其他证书。目标配置和凭据摘要必须与旧回执一致；更换云账号、凭据或地域后按新目标处理。历史回执与新功能兼容，开启更新开关不会重新上传当前版本。
+
+腾讯云通过 [UpdateCertificateInstance](https://cloud.tencent.com/document/api/400/91649) 更新旧证书已绑定的资源，资源类型和地域来自一次不使用缓存的绑定查询。所需 API 包括 `CreateCertificateBindResourceSyncTask`、`DescribeCertificateBindResourceTaskResult`、`DescribeHostUpdateRecord`、`UpdateCertificateInstance`、`DescribeHostUpdateRecordDetail` 和 `UpdateCertificateRecordRetry`。开启清理后还需 `DeleteCertificate`、`DescribeDeleteCertificatesTaskResult` 权限，以及删除绑定检查要求的 `SSL_QCSLinkedRoleInReplaceLoadCertificate` 服务角色；删除始终使用 `IsCheckResource: true`，不会退回强制删除。[删除接口说明](https://cloud.tencent.com/document/api/400/41675)
+
+阿里云通过 `ListCloudResources` 查询旧证书绑定的阿里云资源，再使用 [CreateDeploymentJob](https://www.alibabacloud.com/help/zh/ssl-certificate/developer-reference/api-cas-2020-04-07-createdeploymentjob) 创建部署任务。还需授权 `ListDeploymentJob`、`DescribeDeploymentJob`、`UpdateDeploymentJobStatus`、`ListWorkerResource` 和 `UpdateWorkerResourceStatus` 对应操作；清理需 `DeleteUserCertificate`。云资源对应的服务授权也必须完成。[上传证书部署会消耗部署次数](https://www.alibabacloud.com/help/zh/ssl-certificate/deploy-ssl-certificates-to-alibaba-cloud-services)，请先在阿里云准备可用次数和联系人。
+
+两家云都等待实际资源更新成功后才进入清理；阿里云还逐一核对资源子任务与新证书绑定，删除前查询旧证书是否仍有其他云绑定。清理受云厂商 API 可见范围及权限限制，检查失败或仍有绑定时保留旧证书。任务重启和重试复用持久检查点；本地历史版本和加密材料不会被云端清理删除。
+
 ### Cloudflare DNS
 
 在“DNS 服务商”页面选择 Cloudflare，填写 API Token。Token 需要管理目标区域的 `Zone / Zone / Read` 和 `Zone / DNS / Edit` 权限；不需要账号邮箱或 Global API Key。签发时创建 TXT，完成后按该次创建的记录 ID 删除。编辑时 Token 留空保留原值，不向浏览器回传已有 Token。权限依据：[lego Cloudflare 文档](https://go-acme.github.io/lego/dns/cloudflare/index.html)。

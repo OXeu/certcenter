@@ -34,9 +34,10 @@ type Provider interface {
 // Registry dispatches configured cloud and SSH upstreams.
 type Registry struct{}
 
-// Revision binds deployment receipts to the destination and its configuration.
+// Revision preserves upload identities across changes to cloud update preferences.
 func Revision(cfg certconfig.Upstream) string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%#v", cfg))))
+	legacy := fmt.Sprintf("certconfig.Upstream{Kind:%#v, AccessKey:%#v, SecretKey:%#v, Region:%#v, Address:%#v, User:%#v, PrivateKey:%#v, HostKey:%#v, CertificatePath:%#v, KeyPath:%#v, ReloadCommand:%#v}", cfg.Kind, cfg.AccessKey, cfg.SecretKey, cfg.Region, cfg.Address, cfg.User, cfg.PrivateKey, cfg.HostKey, cfg.CertificatePath, cfg.KeyPath, cfg.ReloadCommand)
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(legacy)))
 }
 
 // Upload selects the configured upstream without sharing credentials between providers.
@@ -53,12 +54,20 @@ func (Registry) Upload(ctx context.Context, cfg certconfig.Upstream, bundle Bund
 	}
 }
 
-func uploadTencent(ctx context.Context, cfg certconfig.Upstream, bundle Bundle) (string, error) {
+func tencentClient(cfg certconfig.Upstream) (*ssl.Client, error) {
 	p := profile.NewClientProfile()
 	p.HttpProfile.ReqTimeout = 60
 	client, err := ssl.NewClient(common.NewCredential(cfg.AccessKey, cfg.SecretKey), cfg.Region, p)
 	if err != nil {
-		return "", errors.New("cannot initialize Tencent SSL client")
+		return nil, errors.New("cannot initialize Tencent SSL client")
+	}
+	return client, nil
+}
+
+func uploadTencent(ctx context.Context, cfg certconfig.Upstream, bundle Bundle) (string, error) {
+	client, err := tencentClient(cfg)
+	if err != nil {
+		return "", err
 	}
 	req := ssl.NewUploadCertificateRequest()
 	req.CertificatePublicKey = common.StringPtr(string(bundle.Certificate))
@@ -91,7 +100,7 @@ type httpDo func(*http.Request) (*http.Response, error)
 // Call attaches operation cancellation to Alibaba SDK requests.
 func (fn httpDo) Call(req *http.Request, _ *http.Transport) (*http.Response, error) { return fn(req) }
 
-func uploadAliyun(ctx context.Context, cfg certconfig.Upstream, bundle Bundle) (string, error) {
+func aliyunClient(ctx context.Context, cfg certconfig.Upstream) (*cas.Client, error) {
 	httpClient := &http.Client{Timeout: 60 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
 	region := cfg.Region
 	if region == "" {
@@ -105,7 +114,15 @@ func uploadAliyun(ctx context.Context, cfg certconfig.Upstream, bundle Bundle) (
 		return resp, nil
 	})})
 	if err != nil {
-		return "", errors.New("cannot initialize Alibaba SSL client")
+		return nil, errors.New("cannot initialize Alibaba SSL client")
+	}
+	return client, nil
+}
+
+func uploadAliyun(ctx context.Context, cfg certconfig.Upstream, bundle Bundle) (string, error) {
+	client, err := aliyunClient(ctx, cfg)
+	if err != nil {
+		return "", err
 	}
 	resp, err := client.UploadUserCertificateWithOptions(&cas.UploadUserCertificateRequest{Name: dara.String(bundle.Name), Cert: dara.String(string(bundle.Certificate)), Key: dara.String(string(bundle.PrivateKey)), ClientToken: dara.String(bundle.Fingerprint)}, &dara.RuntimeOptions{})
 	if err != nil {

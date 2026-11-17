@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/OXeu/certcenter/internal/auth"
 	"github.com/OXeu/certcenter/internal/certconfig"
@@ -64,6 +65,7 @@ func (s *Server) listProviders(c *gin.Context, dns bool) {
 			views = append(views, providerView{Name: name, Fields: map[string]string{
 				"kind": u.Kind, "region": u.Region, "address": u.Address, "user": u.User,
 				"host_key": u.HostKey, "certificate_path": u.CertificatePath, "key_path": u.KeyPath, "reload_command": u.ReloadCommand,
+				"update_resources": strconv.FormatBool(u.UpdateResources), "delete_old": strconv.FormatBool(u.DeleteOld), "contact_ids": u.ContactIDs,
 			}})
 		}
 	}

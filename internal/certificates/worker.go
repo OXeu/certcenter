@@ -50,6 +50,12 @@ func (s *Service) execute(ctx context.Context, job store.CertificateJob) {
 	cancel()
 	finish, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer finishCancel()
+	if errors.Is(err, errCloudPending) {
+		if deferErr := s.Store.DeferCertificateJob(finish, job, time.Now().Add(15*time.Second)); deferErr != nil {
+			s.Log.Error("cannot defer cloud update", "job", job.ID)
+		}
+		return
+	}
 	status, message := "succeeded", "Operation completed"
 	if err != nil {
 		status, message = "failed", err.Error()
@@ -125,7 +131,7 @@ func (s *Service) due(ctx context.Context, domain string, policy certconfig.Poli
 		revision := upstream.Revision(providers.Upstreams[target])
 		found := false
 		for _, receipt := range receipts {
-			if receipt.Target == target && receipt.Revision == revision {
+			if receipt.Target == target && receipt.Revision == revision && deploymentComplete(receipt, providers.Upstreams[target]) {
 				found = true
 				break
 			}

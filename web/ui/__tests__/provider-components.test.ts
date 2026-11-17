@@ -75,6 +75,31 @@ describe('provider management', () => {
       upstream: { kind: 'ssh', address: 'host:22', private_key: 'key' },
     })
     expect(body.upstream).not.toHaveProperty('access_key')
+    expect(body.upstream).not.toHaveProperty('update_resources')
+    expect(body.upstream).not.toHaveProperty('delete_old')
+  })
+  it('saves cloud replacement and cleanup options as booleans', async () => {
+    const workspace = createProviderWorkspace(data, createPage(data))
+    await workspace.refresh()
+    workspace.edit({
+      ...provider,
+      fields: {
+        ...provider.fields,
+        update_resources: 'true',
+        delete_old: 'false',
+        contact_ids: '7,8',
+      },
+    })
+    expect(workspace.form.values.update_resources).toBe('true')
+    workspace.form.values.delete_old = 'true'
+    await workspace.form.submit()
+    const write = fetchMock.mock.calls.find((call) => call[1].method === 'PUT')!
+    expect(JSON.parse(write[1].body).upstream).toMatchObject({
+      kind: 'aliyun',
+      update_resources: true,
+      delete_old: true,
+      contact_ids: '7,8',
+    })
   })
   it('retains blank credentials on edit and keeps stale changes for retry', async () => {
     const workspace = createProviderWorkspace(data, createPage(data))

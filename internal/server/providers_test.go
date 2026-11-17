@@ -165,6 +165,10 @@ func TestProviderCreationSelectionAndDeletion(t *testing.T) {
 				fields = view["fields"].(map[string]any)
 			}
 		}
+		if tc.field == "upstream" {
+			fields["update_resources"] = fields["update_resources"] == "true"
+			fields["delete_old"] = fields["delete_old"] == "true"
+		}
 		status, _ = f.do(http.MethodPut, tc.path+"/"+tc.name, map[string]any{"version": listing["version"], tc.field: fields})
 		if status != http.StatusNoContent {
 			t.Fatal("edit without credentials failed", status)
@@ -191,5 +195,38 @@ func TestProviderCreationSelectionAndDeletion(t *testing.T) {
 	status, _ := f.do(http.MethodPost, "/api/v1/dns-providers", map[string]any{"version": providerRevision(t, f, "/api/v1/dns-providers"), "name": "invalid", "dns": certconfig.DNS{Kind: "alidns"}})
 	if status != http.StatusBadRequest {
 		t.Fatal("missing credentials accepted", status)
+	}
+}
+
+func TestCloudResourceSettingsValidationAndPersistence(t *testing.T) {
+	f, s := certificateFlows(t)
+	providerAdmin(t, f, s)
+	path := "/api/v1/upstreams"
+	for _, cfg := range []certconfig.Upstream{
+		{Kind: "aliyun", DeleteOld: true},
+		{Kind: "aliyun", UpdateResources: true},
+		{Kind: "aliyun", UpdateResources: true, ContactIDs: "1,invalid"},
+	} {
+		status, _ := f.do(http.MethodPut, path+"/ali", map[string]any{"version": providerRevision(t, f, path), "upstream": cfg})
+		if status != http.StatusBadRequest {
+			t.Fatal("invalid cloud update configuration accepted", status)
+		}
+	}
+	status, body := f.do(http.MethodPut, path+"/ali", map[string]any{"version": providerRevision(t, f, path), "upstream": certconfig.Upstream{Kind: "aliyun", UpdateResources: true, DeleteOld: true, ContactIDs: "7,8"}})
+	if status != http.StatusNoContent {
+		t.Fatal("cloud settings not saved", status, body)
+	}
+	providers, err := s.cfg.Remote.Providers(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := providers.Upstreams["ali"]
+	if !cfg.UpdateResources || !cfg.DeleteOld || cfg.ContactIDs != "7,8" || cfg.SecretKey != "cloud-secret" {
+		t.Fatal("cloud update preferences or credentials lost")
+	}
+	_, listing := f.do(http.MethodGet, path, nil)
+	view := listing["providers"].([]any)[0].(map[string]any)["fields"].(map[string]any)
+	if view["update_resources"] != "true" || view["delete_old"] != "true" || view["contact_ids"] != "7,8" {
+		t.Fatal("preferences missing from provider editor", view)
 	}
 }
