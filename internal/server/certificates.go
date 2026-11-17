@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 
@@ -35,6 +36,7 @@ func (s *Server) mountCertificates(r *gin.Engine) {
 	api.POST("/domains", auth.RequireAdmin(), s.createCertificateDomain)
 	api.GET("/domains/:domain", s.certificateDomain)
 	api.PUT("/domains/:domain", s.saveCertificateDomain)
+	api.POST("/domains/:domain/delegations/check", s.checkDomainDelegations)
 	api.POST("/domains/:domain/certificates/:policy/:action", s.queueCertificate)
 	api.GET("/certificate-settings", auth.RequireAdmin(), s.certificateSettings)
 	api.GET("/users", auth.RequireAdmin(), s.apiListUsers)
@@ -144,19 +146,18 @@ func (s *Server) certificateDomain(c *gin.Context) {
 		return
 	}
 	dns, upstreams := providerNames(providers)
-	delegations := []gin.H{}
-	for _, p := range domain.Certificates {
-		provider := providers.DNS[p.DNSProvider]
-		if provider.Kind != "acme-dns" {
-			continue
-		}
-		for _, name := range p.Names {
-			base := strings.TrimPrefix(name, "*.")
-			if a, ok := provider.Accounts[base]; ok {
-				delegations = append(delegations, gin.H{"name": "_acme-challenge." + base, "target": a.FullDomain})
-			}
-		}
+	if s.delegatedDNS == nil {
+		dns = slices.DeleteFunc(dns, func(name string) bool {
+			provider := providers.DNS[name]
+			return provider.Kind == "acme-dns" && provider.APIBase == ""
+		})
 	}
+	delegations, err := s.domainDelegations(c.Request.Context(), domain, providers)
+	if err != nil {
+		s.certificateError(c, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"domain": domain, "version": domainVersion(domain), "certificates": certificates, "jobs": jobs, "events": events, "dns_providers": dns, "upstreams": upstreams, "delegations": delegations})
 }
 
@@ -188,6 +189,17 @@ func (s *Server) saveCertificateDomain(c *gin.Context) {
 	}
 	if err := domain.Validate(providers); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	for _, policy := range domain.Certificates {
+		provider := providers.DNS[policy.DNSProvider]
+		if provider.Kind == "acme-dns" && provider.APIBase == "" && s.delegatedDNS == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "built-in acme-dns is not configured"})
+			return
+		}
+	}
+	if _, err := s.domainDelegations(c.Request.Context(), domain, providers); err != nil {
+		s.certificateError(c, err)
 		return
 	}
 	if err := s.cfg.Remote.SaveDomain(c.Request.Context(), domain); err != nil {
@@ -239,5 +251,5 @@ func (s *Server) certificateSettings(c *gin.Context) {
 		return
 	}
 	dns, upstreams := providerNames(providers)
-	c.JSON(http.StatusOK, gin.H{"local": s.cfg.Remote.IsLocal(), "configcenter_url": s.cfg.ConfigCenterURL, "dns_providers": dns, "upstreams": upstreams, "directory_url": providers.ACME.DirectoryURL, "email": providers.ACME.Email, "accept_terms": providers.ACME.AcceptTerms})
+	c.JSON(http.StatusOK, gin.H{"local": s.cfg.Remote.IsLocal(), "configcenter_url": s.cfg.ConfigCenterURL, "dns_providers": dns, "upstreams": upstreams, "directory_url": providers.ACME.DirectoryURL, "email": providers.ACME.Email, "accept_terms": providers.ACME.AcceptTerms, "delegation_zone": s.cfg.ACMEDNS.Zone})
 }

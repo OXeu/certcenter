@@ -158,3 +158,30 @@ describe('certificate management', () => {
     expect(notify).toHaveBeenCalledWith('info', expect.stringContaining('DNS providers page'))
   })
 })
+
+it('checks generated CNAME records with CSRF and shows the result', async () => {
+  const record = { name: '_acme-challenge.example.com', target: 'random.auth.example.net' }
+  fetchMock.mockResolvedValueOnce({
+    ok: true,
+    status: 200,
+    json: async () => ({ ...detail, delegations: [record] }),
+  })
+  const wrapper = mount(CertificatePage, { props: { data, page: createPage(data) } })
+  await flushPromises()
+  expect(wrapper.text()).toContain(record.target)
+  expect(wrapper.text()).toContain('Not checked')
+  fetchMock.mockResolvedValueOnce({
+    ok: true,
+    status: 200,
+    json: async () => ({ delegations: [{ ...record, verified: true }] }),
+  })
+  await wrapper
+    .findAll('button')
+    .find((button) => button.text() === 'Check CNAME')!
+    .trigger('click')
+  await flushPromises()
+  expect(fetchMock.mock.calls[1][0]).toBe('/api/v1/domains/example.com/delegations/check')
+  expect(fetchMock.mock.calls[1][1].headers['X-CSRF-Token']).toBe('csrf')
+  expect(wrapper.text()).toContain('CNAME configured')
+  wrapper.unmount()
+})

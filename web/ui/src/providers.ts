@@ -3,22 +3,27 @@ import { api } from './core.ts'
 import { createForm } from './forms.ts'
 import { dangerAction } from './danger.ts'
 import { notify } from './toast.ts'
-import { FormValidationError } from './errors.ts'
 import type { PageData } from './data.ts'
 import type { PageContext } from './page.ts'
 
 export type Provider = { name: string; fields: Record<string, string> }
-type Registry = { version: string; providers: Provider[] }
+type Registry = { version: string; providers: Provider[]; delegation_zone?: string }
 
 export function createProviderWorkspace(data: PageData, page: PageContext) {
   const dns = data.page === 'dns-providers'
   const base = dns ? '/api/v1/dns-providers' : '/api/v1/upstreams'
-  const state = reactive({ busy: false, version: '', providers: [] as Provider[] })
+  const state = reactive({
+    busy: false,
+    version: '',
+    delegationZone: '',
+    providers: [] as Provider[],
+  })
   const form = createForm(page)
-  const kinds = dns ? ['alidns', 'tencentcloud', 'cloudflare', 'acme-dns'] : ['aliyun', 'tencentcloud', 'ssh']
+  const kinds = dns ? ['alidns', 'tencentcloud', 'cloudflare'] : ['aliyun', 'tencentcloud', 'ssh']
   async function load() {
     const result = (await api(base)) as Registry
     state.version = result.version
+    state.delegationZone = result.delegation_zone ?? ''
     state.providers = result.providers
   }
   async function refresh() {
@@ -61,14 +66,12 @@ export function createProviderWorkspace(data: PageData, page: PageContext) {
       },
       makeField('access_key', cloud, true, true),
       makeField('secret_key', cloud, true, true),
-      { ...makeField('api_token', ['cloudflare'], true, true), help: provider ? 'providers.keepSecret' : 'providers.cloudflareHelp' },
       makeField('region', cloud, false),
       ...(dns
         ? [
-            makeField('api_base', ['acme-dns']),
             {
-              ...makeField('accounts', ['acme-dns'], true, true, true),
-              help: provider ? 'providers.keepAccounts' : 'providers.accountsHelp',
+              ...makeField('api_token', ['cloudflare'], true, true),
+              help: provider ? 'providers.keepSecret' : 'providers.cloudflareHelp',
             },
           ]
         : [
@@ -94,7 +97,7 @@ export function createProviderWorkspace(data: PageData, page: PageContext) {
         for (const field of fields) {
           if ('kinds' in field && field.kinds.includes(form.values.kind)) {
             const value = form.values[field.key]
-            settings[field.key] = field.key === 'accounts' ? parseAccounts(value, page) : value
+            settings[field.key] = value
           }
         }
         const name = provider?.name ?? form.values.name.trim()
@@ -108,7 +111,11 @@ export function createProviderWorkspace(data: PageData, page: PageContext) {
       },
     )
   }
+  function editable(provider: Provider) {
+    return provider.fields.kind !== 'acme-dns'
+  }
   function actionsFor(provider: Provider) {
+    if (provider.name === 'certcenter-acme-dns') return []
     const version = state.version
     return [
       dangerAction(
@@ -128,16 +135,5 @@ export function createProviderWorkspace(data: PageData, page: PageContext) {
       ),
     ]
   }
-  return { state, form, refresh, edit, actionsFor }
-}
-
-function parseAccounts(value: string, page: PageContext): unknown {
-  if (!value.trim()) return undefined
-  try {
-    const accounts: unknown = JSON.parse(value)
-    if (accounts && typeof accounts === 'object' && !Array.isArray(accounts)) return accounts
-  } catch {
-    throw new FormValidationError(page.msg('providers.invalidAccounts'))
-  }
-  throw new FormValidationError(page.msg('providers.invalidAccounts'))
+  return { state, form, refresh, edit, actionsFor, editable }
 }

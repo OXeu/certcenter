@@ -8,8 +8,20 @@ import type { PageContext } from './page.ts'
 
 const props = defineProps<{ data: PageData; page: PageContext }>()
 const { msg } = props.page
-const { state, form, refresh, createDomain, editPolicy, actionsFor, pending, validity, status } =
-  createCertificateWorkspace(props.data, props.page)
+const {
+  state,
+  form,
+  refresh,
+  createDomain,
+  editPolicy,
+  actionsFor,
+  pending,
+  validity,
+  status,
+  checkDelegations,
+  delegationStatus,
+  providerLabel,
+} = createCertificateWorkspace(props.data, props.page)
 const isDomains = computed(() => props.data.page === 'domains')
 const isSettings = computed(() => props.data.page === 'certificate-settings')
 const policies = computed(() => state.detail?.domain.certificates ?? [])
@@ -134,7 +146,7 @@ onUnmounted(() => {
               </td>
               <td class="break-all">
                 {{ policy.names.join(', ') }}
-                <p class="text-muted-foreground">{{ policy.dns_provider }}</p>
+                <p class="text-muted-foreground">{{ providerLabel(policy.dns_provider) }}</p>
               </td>
               <td>{{ validity(policy) }}</td>
               <td>
@@ -158,7 +170,7 @@ onUnmounted(() => {
           </tbody>
         </table>
       </div>
-      <section v-if="state.detail.delegations.length" class="card">
+      <section v-if="state.detail.delegations.length" class="card space-y-3">
         <h2 class="font-medium">{{ msg('cert.delegation') }}</h2>
         <p class="text-sm text-muted-foreground">{{ msg('cert.delegationHelp') }}</p>
         <p
@@ -167,7 +179,11 @@ onUnmounted(() => {
           class="break-all font-mono text-sm"
         >
           {{ record.name }} CNAME {{ record.target }}
+          <span class="badge">{{ delegationStatus(record) }}</span>
         </p>
+        <button class="btn-outline" :disabled="state.checking" @click="checkDelegations">
+          {{ msg('cert.checkDelegation') }}
+        </button>
       </section>
     </div>
 

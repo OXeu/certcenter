@@ -28,6 +28,7 @@ type ACME struct {
 // DNS selects an explicitly configured DNS provider.
 type DNS struct {
 	APIToken  string                `json:"api_token"`
+	Scope     string                `json:"-"`
 	Kind      string                `json:"kind"`
 	AccessKey string                `json:"access_key"`
 	SecretKey string                `json:"secret_key"`
@@ -128,7 +129,7 @@ func (d Domain) Validate(p Providers) error {
 		if !ok {
 			return fmt.Errorf("unknown DNS provider %q", c.DNSProvider)
 		}
-		if dns.Kind == "acme-dns" {
+		if dns.Kind == "acme-dns" && dns.APIBase != "" {
 			for _, name := range c.Names {
 				if _, ok := dns.Accounts[strings.TrimPrefix(name, "*.")]; !ok {
 					return fmt.Errorf("missing acme-dns registration for %s", name)
@@ -171,6 +172,9 @@ func (p Providers) Validate() error {
 				return errors.New("cloudflare API token is required")
 			}
 		case "acme-dns":
+			if d.APIBase == "" {
+				continue
+			}
 			if !httpsURL(d.APIBase) {
 				return errors.New("acme-dns api_base must use HTTPS")
 			}

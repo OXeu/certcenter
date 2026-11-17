@@ -123,27 +123,34 @@ describe('provider management', () => {
       api_token: 'cloudflare-secret',
     })
   })
-  it('validates acme-dns JSON without exposing supplied credentials in errors', async () => {
-    const dnsData = { ...data, page: 'dns-providers' as const }
-    const workspace = createProviderWorkspace(dnsData, createPage(dnsData))
-    await workspace.refresh()
-    workspace.edit()
-    Object.assign(workspace.form.values, {
-      kind: 'acme-dns',
-      name: 'delegated',
-      api_base: 'https://auth.example.com',
-      accounts: '{"password":"sensitive',
+  it('shows managed CNAME validation without account JSON or credential forms', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        version: 'revision',
+        delegation_zone: 'auth.example.net',
+        providers: [{ name: 'certcenter-acme-dns', fields: { kind: 'acme-dns' } }],
+      }),
     })
-    await workspace.form.submit()
-    expect(workspace.form.error).toBe('Enter registrations as a JSON object.')
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    workspace.form.values.accounts =
-      '{"example.com":{"username":"user","password":"password","subdomain":"sub","fulldomain":"sub.example.com"}}'
-    await workspace.form.submit()
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/v1/dns-providers')
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body).dns.accounts['example.com'].username).toBe(
-      'user',
-    )
+    const dnsData = { ...data, page: 'dns-providers' as const }
+    const wrapper = mount(ProviderPage, { props: { data: dnsData, page: createPage(dnsData) } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('CNAME validation')
+    expect(wrapper.findAll('[data-danger-action]').length).toBe(0)
+    expect(wrapper.findAll('button').some((button) => button.text() === 'Edit')).toBe(false)
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Add DNS provider')!
+      .trigger('click')
+    await flushPromises()
+    await wrapper.get('[role="combobox"]').trigger('click')
+    expect(wrapper.text()).toContain('Cloudflare')
+    expect(wrapper.findAll('textarea')).toHaveLength(0)
+    expect(
+      wrapper.findAll('[role="option"]').some((option) => option.text().includes('acme-dns')),
+    ).toBe(false)
+    wrapper.unmount()
   })
   it('shows provider fields in a dialog and changes them with the type selector', async () => {
     const wrapper = mount(ProviderPage, { props: { data, page: createPage(data) } })

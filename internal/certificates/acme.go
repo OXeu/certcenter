@@ -25,6 +25,7 @@ import (
 	legolog "github.com/go-acme/lego/v4/log"
 	"github.com/go-acme/lego/v4/registration"
 
+	"github.com/OXeu/certcenter/internal/acmedns"
 	"github.com/OXeu/certcenter/internal/certconfig"
 	"github.com/OXeu/certcenter/internal/dnsprovider"
 	"github.com/OXeu/certcenter/internal/store"
@@ -49,8 +50,9 @@ type AccountStore interface {
 
 // ACMEIssuer uses lego with database-backed account keys and explicit DNS adapters.
 type ACMEIssuer struct {
-	Store AccountStore
-	Vault *Vault
+	Delegation *acmedns.Service
+	Store      AccountStore
+	Vault      *Vault
 }
 
 type acmeUser struct {
@@ -95,7 +97,15 @@ func (a *ACMEIssuer) Issue(ctx context.Context, cfg certconfig.ACME, dns certcon
 	if err != nil {
 		return Material{}, errors.New("ACME discovery failed; check the directory URL")
 	}
-	provider, err := dnsprovider.New(ctx, dns)
+	var provider dnsprovider.Provider
+	if dns.Kind == "acme-dns" && dns.APIBase == "" {
+		if a.Delegation == nil {
+			return Material{}, errors.New("built-in acme-dns is not configured")
+		}
+		provider = a.Delegation.Provider(ctx, dns.Scope)
+	} else {
+		provider, err = dnsprovider.New(ctx, dns)
+	}
 	if err != nil {
 		return Material{}, fmt.Errorf("configure DNS: %w", err)
 	}

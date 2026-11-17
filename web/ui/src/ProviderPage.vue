@@ -7,7 +7,10 @@ import type { PageData } from './data.ts'
 import type { PageContext } from './page.ts'
 const props = defineProps<{ data: PageData; page: PageContext }>()
 const { msg } = props.page
-const { state, form, refresh, edit, actionsFor } = createProviderWorkspace(props.data, props.page)
+const { state, form, refresh, edit, actionsFor, editable } = createProviderWorkspace(
+  props.data,
+  props.page,
+)
 const unavailable = computed(() => state.busy || !state.version)
 const isDNS = computed(() => props.data.page === 'dns-providers')
 const title = computed(() => msg(isDNS.value ? 'cert.dnsProviders' : 'cert.upstreams'))
@@ -22,6 +25,7 @@ onMounted(refresh)
     <button class="btn" :disabled="unavailable" @click="edit()">{{ addLabel }}</button>
   </div>
   <p class="mb-4 text-sm text-muted-foreground">{{ msg('providers.help') }}</p>
+  <p v-if="isDNS" class="mb-4 text-sm text-muted-foreground">{{ msg('providers.managedHelp') }}</p>
   <div class="table-scroll">
     <table class="table" :aria-label="title" :aria-busy="state.busy">
       <thead>
@@ -36,7 +40,12 @@ onMounted(refresh)
           <td>{{ provider.name }}</td>
           <td>{{ msg(`providers.${provider.fields.kind}`) }}</td>
           <td>
-            <button class="btn-ghost" :disabled="state.busy" @click="edit(provider)">
+            <button
+              v-if="editable(provider)"
+              class="btn-ghost"
+              :disabled="state.busy"
+              @click="edit(provider)"
+            >
               {{ msg('common.edit') }}
             </button>
             <DangerActions

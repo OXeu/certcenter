@@ -131,7 +131,6 @@ func TestProviderCreationSelectionAndDeletion(t *testing.T) {
 		{"/api/v1/dns-providers", "new-dns", "dns", certconfig.DNS{Kind: "tencentcloud", AccessKey: "new-id", SecretKey: "new-secret"}},
 		{"/api/v1/upstreams", "new-cloud", "upstream", certconfig.Upstream{Kind: "tencentcloud", AccessKey: "new-id", SecretKey: "new-secret"}},
 		{"/api/v1/upstreams", "new-ssh", "upstream", certconfig.Upstream{Kind: "ssh", Address: "host:22", User: "deploy", PrivateKey: "ssh-secret", HostKey: "ssh-host-public", CertificatePath: "/cert.pem", KeyPath: "/key.pem"}},
-		{"/api/v1/dns-providers", "delegated", "dns", certconfig.DNS{Kind: "acme-dns", APIBase: "https://auth.example.com", Accounts: map[string]certconfig.DNSAccount{"example.com": {Username: "acme-user", Password: "acme-secret", Subdomain: "sub", FullDomain: "sub.auth.example.com"}}}},
 	} {
 		status, body := f.do(http.MethodPost, tc.path, map[string]any{"version": providerRevision(t, f, tc.path), "name": tc.name, tc.field: tc.value})
 		if status != http.StatusNoContent {
@@ -182,10 +181,6 @@ func TestProviderCreationSelectionAndDeletion(t *testing.T) {
 		case "new-ssh":
 			if stored.Upstreams[tc.name].PrivateKey != "ssh-secret" {
 				t.Fatal("SSH key was discarded")
-			}
-		case "delegated":
-			if stored.DNS[tc.name].Accounts["example.com"].Password != "acme-secret" {
-				t.Fatal("acme-dns registration was discarded")
 			}
 		}
 		status, _ = f.do(http.MethodDelete, tc.path+"/"+tc.name, map[string]any{"version": providerRevision(t, f, tc.path)})

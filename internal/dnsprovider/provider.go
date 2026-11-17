@@ -63,6 +63,9 @@ func New(ctx context.Context, cfg certconfig.DNS) (Provider, error) {
 			return response, nil
 		})}})
 	case "acme-dns":
+		if cfg.APIBase == "" {
+			return nil, errors.New("built-in acme-dns requires the managed challenge service")
+		}
 		provider = callbacks{present: func(domain, _, key string) error { return presentDelegated(ctx, cfg, domain, key) }, cleanup: func(_, _, _ string) error { return nil }}
 	default:
 		return nil, errors.New("unsupported DNS provider")

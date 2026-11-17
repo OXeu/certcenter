@@ -154,3 +154,22 @@ func (r *Remote) Write(ctx context.Context, key string, value any) error {
 	}
 	return nil
 }
+
+// EnsureManagedDNS makes built-in CNAME validation available after the DNS listener is configured.
+func (r *Remote) EnsureManagedDNS(ctx context.Context) error {
+	p, err := r.Providers(ctx)
+	if err != nil {
+		return err
+	}
+	if existing, ok := p.DNS[ManagedDNSProvider]; ok {
+		if existing.Kind != "acme-dns" || existing.APIBase != "" {
+			return errors.New("reserved built-in DNS provider name is already in use")
+		}
+		return nil
+	}
+	if p.DNS == nil {
+		p.DNS = map[string]DNS{}
+	}
+	p.DNS[ManagedDNSProvider] = DNS{Kind: "acme-dns"}
+	return r.Write(ctx, "certcenter.providers", p)
+}

@@ -17,6 +17,7 @@ import (
 
 // Config holds every runtime setting of the server.
 type Config struct {
+	ACMEDNS           certconfig.ACMEDNS `json:"acme_dns"`
 	Remote            *certconfig.Remote `json:"-"`
 	ConfigCenterURL   string             `json:"-"`
 	EncryptionKey     string             `json:"encryption_key"`

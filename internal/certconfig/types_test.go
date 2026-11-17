@@ -26,7 +26,7 @@ func TestDomainScopeValidation(t *testing.T) {
 }
 
 func TestDelegatedDNSRequiresAllRegistrations(t *testing.T) {
-	p := Providers{DNS: map[string]DNS{"delegated": {Kind: "acme-dns", Accounts: map[string]DNSAccount{"example.com": {FullDomain: "id.auth.example.net"}}}}}
+	p := Providers{DNS: map[string]DNS{"delegated": {Kind: "acme-dns", APIBase: "https://auth.example.net", Accounts: map[string]DNSAccount{"example.com": {FullDomain: "id.auth.example.net"}}}}}
 	d := Domain{Name: "example.com", Owner: "admin@example.com", Certificates: []Policy{{ID: "wildcard", Names: []string{"example.com", "*.example.com"}, DNSProvider: "delegated", RenewBeforeDays: 30}}}
 	if err := d.Validate(p); err != nil {
 		t.Fatal(err)
@@ -58,5 +58,18 @@ func TestCloudflareDNSValidation(t *testing.T) {
 	p.DNS["cf"] = DNS{Kind: "cloudflare", APIToken: "token"}
 	if err := p.Validate(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestManagedDNSValidation(t *testing.T) {
+	p := Providers{DNS: map[string]DNS{ManagedDNSProvider: {Kind: "acme-dns"}}}
+	d := Domain{Name: "example.com", Owner: "owner@example.com", Certificates: []Policy{{ID: "main", Names: []string{"example.com", "*.example.com", "sub.example.com"}, DNSProvider: ManagedDNSProvider, RenewBeforeDays: 30}}}
+	if err := d.Validate(p); err != nil {
+		t.Fatal("built-in DNS requires manual accounts", err)
+	}
+	for _, cfg := range []ACMEDNS{{Zone: "invalid"}, {Zone: "auth.example.net", Nameserver: "ns.example.net", ListenAddress: "bad"}, {Zone: "auth.example.net", Nameserver: "ns.example.net", ListenAddress: ":53", Addresses: []string{"not-an-ip"}}} {
+		if err := cfg.Validate(); err == nil {
+			t.Fatal("invalid DNS authority config accepted")
+		}
 	}
 }

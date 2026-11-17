@@ -132,7 +132,9 @@ func (s *Service) Process(ctx context.Context, job store.CertificateJob) error {
 		if err := s.event(ctx, job, "issuing", policy.DNSProvider, "Preparing ACME account and DNS-01 validation"); err != nil {
 			return err
 		}
-		material, err := s.Issuer.Issue(ctx, providers.ACME, providers.DNS[policy.DNSProvider], policy.Names)
+		dns := providers.DNS[policy.DNSProvider]
+		dns.Scope = domain.Name
+		material, err := s.Issuer.Issue(ctx, providers.ACME, dns, policy.Names)
 		if err != nil {
 			return fmt.Errorf("issue certificate: %w", err)
 		}

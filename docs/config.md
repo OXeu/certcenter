@@ -84,19 +84,7 @@ MySQL 示例：`database_driver` 为 `mysql`，`database_dsn` 为 `user:password
       "region": "cn-hangzhou"
     },
     "tencent-dns": { "kind": "tencentcloud", "access_key": "ID", "secret_key": "SECRET" },
-    "cloudflare-dns": { "kind": "cloudflare", "api_token": "填写限定域名权限的 API Token" },
-    "delegated": {
-      "kind": "acme-dns",
-      "api_base": "https://auth.example.net",
-      "accounts": {
-        "example.com": {
-          "username": "注册返回的username",
-          "password": "注册返回的password",
-          "subdomain": "注册返回的subdomain",
-          "fulldomain": "registration.auth.example.net"
-        }
-      }
-    }
+    "cloudflare-dns": { "kind": "cloudflare", "api_token": "填写限定域名权限的 API Token" }
   },
   "upstreams": {
     "tencent-ssl": { "kind": "tencentcloud", "access_key": "ID", "secret_key": "SECRET" },
@@ -128,11 +116,47 @@ MySQL 示例：`database_driver` 为 `mysql`，`database_dsn` 为 `user:password
 
 在“DNS 服务商”页面选择 Cloudflare，填写 API Token。Token 需要管理目标区域的 `Zone / Zone / Read` 和 `Zone / DNS / Edit` 权限；不需要账号邮箱或 Global API Key。签发时创建 TXT，完成后按该次创建的记录 ID 删除。编辑时 Token 留空保留原值，不向浏览器回传已有 Token。权限依据：[lego Cloudflare 文档](https://go-acme.github.io/lego/dns/cloudflare/index.html)。
 
-### acme-dns 委派
+### 本项目内置 acme-dns 委派
 
-部署兼容 [acme-dns](https://github.com/acme-dns/acme-dns) 的权威 DNS 服务，向它的 `/register` 注册，保存返回数据到 `accounts`。把 `_acme-challenge.example.com` CNAME 指向返回的 `fulldomain`。`example.com` 与 `*.example.com` 共享注册记录；另一个具体子域名需要自己的注册与 CNAME。
+用户不再向外部服务注册账号，也不填写 `username`、`password`、`subdomain`、`fulldomain` 或 JSON 映射。CertCenter 内置权威 DNS 应答和 TXT 发布能力，不开放匿名注册或公网 TXT 写入接口。
 
-CertCenter 通过带 `X-Api-User` / `X-Api-Key` 的 `/update` 发布验证 TXT，兼容服务滚动保留两条 TXT，支持根域名与通配符同时验证。账户配置经 SDK 读取，不使用本地 acme-dns JSON 文件。
+管理员先在 `certcenter.server` 配置一次公共验证区域，重启服务：
+
+```json
+{
+  "acme_dns": {
+    "zone": "auth.cert.example.com",
+    "listen_address": "0.0.0.0:53",
+    "nameserver": "ns.cert.example.com",
+    "addresses": ["203.0.113.10"]
+  }
+}
+```
+
+这是需要合并到现有 server 对象的字段，不能替换整个 server 配置。以上域名和地址是示例，应替换成自己控制的域名及公网 IP。`zone` 为空表示停用内置 DNS；`addresses` 可包含 IPv4 和 IPv6。若 nameserver 位于验证区域内，内置服务会回答其 A/AAAA 查询。
+
+在 `cert.example.com` 的 DNS 中一次性添加：
+
+| 类型 | 名称                    | 值                    |
+| ---- | ----------------------- | --------------------- |
+| A    | `ns.cert.example.com`   | DNS 服务的公网 IPv4   |
+| NS   | `auth.cert.example.com` | `ns.cert.example.com` |
+
+服务器、容器端口映射和防火墙必须让公网同时访问 **UDP 53 和 TCP 53**。即使本地监听其他端口，公网仍须转发 53 端口。纯 HTTP 入口不足以承接权威 DNS；验证区域的 NS 必须指向运行此 DNS 服务的常驻实例。NS 主机位于被委派区域内时，还需在父区域配置相应 glue 地址。网站的 HTTPS 域名无需与验证子域相同。
+
+服务启动后自动提供 `certcenter-acme-dns` 验证方式。管理员添加域名后，域名页立即展示：
+
+```text
+_acme-challenge.example.com CNAME <系统生成的随机标识>.auth.cert.example.com
+```
+
+用户到原 DNS 提供商添加这条 CNAME 即可。添加证书策略时选择“CNAME 委派验证（acme-dns）”对应的账号，保存后也会为证书中的子域名自动分配所需记录。`example.com` 与 `*.example.com` 共用一条；`sub.example.com` 有自己的记录。页面可检查 CNAME 是否生效；实际签发仍由 ACME DNS-01 传播检查验证。
+
+CNAME 使用 **仅 DNS** 模式，关闭代理与 CNAME 展平，确保 CA 能沿 CNAME 查询 TXT。Cloudflare 的代理 CNAME 不支持这种 TXT 查询链，见 [Cloudflare DNS 类型说明](https://developers.cloudflare.com/dns/manage-dns-records/reference/dns-record-types/)。
+
+目标标识保存在数据库中，刷新或重启不会变化。不同管理域名的目标相互隔离。签发和续期自动写入 TXT；根域名、通配符及并发任务的值分别保存，清理只删除当前挑战的值，超过 15 分钟的值不再对外回答。DNS 服务只回答验证区域，不提供递归解析或区域传送。
+
+已有外部 acme-dns 配置仍可读取执行，原注册信息保留，页面不再提供手工注册 JSON 编辑器。迁移时把证书策略切换到 `certcenter-acme-dns` 并替换为新 CNAME；不自动改写用户已有 DNS。内置目标不依赖旧的外部账号。
 
 ## certcenter.domain.example.com
 

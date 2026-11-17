@@ -55,6 +55,9 @@ func LoadRemote(ctx context.Context) (Config, error) {
 }
 
 func validateServerConfig(cfg *Config) error {
+	if err := cfg.ACMEDNS.Validate(); err != nil {
+		return fmt.Errorf("validate acme_dns: %w", err)
+	}
 	if cfg.OAuth.RedirectURL == "" {
 		cfg.OAuth.RedirectURL = strings.TrimRight(cfg.PublicURL, "/") + "/oauth/callback"
 	}

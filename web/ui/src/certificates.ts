@@ -63,6 +63,8 @@ type Settings = {
 export function createCertificateWorkspace(data: PageData, page: PageContext) {
   const state = reactive({
     busy: false,
+    checking: false,
+    checks: {} as Record<string, boolean>,
     domains: [] as { name: string; owner: string; count: number }[],
     detail: null as DomainView | null,
     settings: null as Settings | null,
@@ -116,7 +118,7 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
     if (!detail) return
     const original = detail.domain.certificates ?? []
     const version = detail.version
-    const options = detail.dns_providers.map((value) => ({ value, label: value }))
+    const options = detail.dns_providers.map((value) => ({ value, label: providerLabel(value) }))
     if (!options.length) {
       notify('info', page.msg('cert.noDNSProviders'))
       return
@@ -140,7 +142,11 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
       {
         id: policy?.id ?? '',
         names: policy?.names.join('\n') ?? detail.domain.name,
-        dns_provider: policy?.dns_provider ?? options[0]?.value ?? '',
+        dns_provider:
+          policy?.dns_provider ??
+          options.find((option) => option.value === 'certcenter-acme-dns')?.value ??
+          options[0]?.value ??
+          '',
         enabled: String(policy?.enabled ?? true),
         auto_renew: String(policy?.auto_renew ?? false),
         renew_before_days: String(policy?.renew_before_days ?? 30),
@@ -168,6 +174,33 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
       },
     )
     form.selections.upstreams = [...(policy?.upstreams ?? [])]
+  }
+  async function checkDelegations() {
+    if (state.checking) return
+    state.checking = true
+    try {
+      const result = (await api(`${base}/delegations/check`, {
+        method: 'POST',
+        csrf: page.csrf,
+      })) as { delegations: { name: string; target: string; verified: boolean }[] }
+      state.checks = Object.fromEntries(
+        result.delegations.map((record) => [record.name + record.target, record.verified]),
+      )
+      notify('info', page.msg('cert.delegationChecked'))
+    } catch (err) {
+      page.report(err)
+    } finally {
+      state.checking = false
+    }
+  }
+  function providerLabel(name: string) {
+    return name === 'certcenter-acme-dns' ? page.msg('providers.acme-dns') : name
+  }
+  function delegationStatus(record: { name: string; target: string }) {
+    const checked = state.checks[record.name + record.target]
+    return page.msg(
+      checked === undefined ? 'cert.notChecked' : checked ? 'cert.cnameReady' : 'cert.cnamePending',
+    )
   }
   function actionsFor(policy: Policy) {
     const makeAction = (action: 'issue' | 'deploy') =>
@@ -212,7 +245,20 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
     if (remaining <= 0) return page.msg('cert.expired')
     return page.msg('cert.daysLeft', { Days: String(Math.ceil(remaining / 86_400_000)) })
   }
-  return { state, form, refresh, createDomain, editPolicy, actionsFor, pending, validity, status }
+  return {
+    state,
+    form,
+    refresh,
+    createDomain,
+    editPolicy,
+    actionsFor,
+    pending,
+    validity,
+    status,
+    checkDelegations,
+    delegationStatus,
+    providerLabel,
+  }
 }
 
 function split(value: string) {

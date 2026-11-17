@@ -21,6 +21,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/OXeu/certcenter"
+	"github.com/OXeu/certcenter/internal/acmedns"
 	"github.com/OXeu/certcenter/internal/auth"
 	"github.com/OXeu/certcenter/internal/certificates"
 	"github.com/OXeu/certcenter/internal/config"
@@ -34,6 +35,7 @@ var templateFS embed.FS
 
 // Server wires storage, authentication and HTTP handlers together.
 type Server struct {
+	delegatedDNS  *acmedns.Service
 	certificates  *certificates.Service
 	configMu      sync.Mutex
 	cfg           config.Config
@@ -90,11 +92,20 @@ func newServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Serve
 	}
 	if cfg.Remote != nil {
 		st.SetRegistrationPolicy(cfg.Remote.RegistrationAllowed)
+		if cfg.ACMEDNS.Zone != "" {
+			s.delegatedDNS = &acmedns.Service{Config: cfg.ACMEDNS, Store: st}
+			if err := cfg.Remote.EnsureManagedDNS(ctx); err != nil {
+				return nil, fmt.Errorf("configure built-in DNS provider: %w", err)
+			}
+			if err := s.delegatedDNS.Start(ctx, log); err != nil {
+				return nil, fmt.Errorf("start authoritative DNS: %w", err)
+			}
+		}
 		vault, err := certificates.NewVault(cfg.EncryptionKey)
 		if err != nil {
 			return nil, fmt.Errorf("configure certificate vault: %w", err)
 		}
-		s.certificates = &certificates.Service{Store: st, Settings: cfg.Remote, Issuer: &certificates.ACMEIssuer{Store: st, Vault: vault}, Upstream: upstream.Registry{}, Vault: vault, Log: log}
+		s.certificates = &certificates.Service{Store: st, Settings: cfg.Remote, Issuer: &certificates.ACMEIssuer{Store: st, Vault: vault, Delegation: s.delegatedDNS}, Upstream: upstream.Registry{}, Vault: vault, Log: log}
 		go s.certificates.Run(ctx)
 	}
 	return s, nil

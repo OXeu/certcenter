@@ -67,7 +67,7 @@ func (s *Server) listProviders(c *gin.Context, dns bool) {
 			}})
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"version": providersVersion(p), "providers": views})
+	c.JSON(http.StatusOK, gin.H{"version": providersVersion(p), "providers": views, "delegation_zone": s.cfg.ACMEDNS.Zone})
 }
 
 func (s *Server) saveProvider(c *gin.Context, dns bool) {
@@ -91,6 +91,10 @@ func (s *Server) saveProvider(c *gin.Context, dns bool) {
 	name := c.Param("name")
 	if c.Request.Method == http.MethodPost {
 		name = in.Name
+	}
+	if dns && name == certconfig.ManagedDNSProvider {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "built-in DNS provider is managed by server settings"})
+		return
 	}
 	_, exists := p.Upstreams[name]
 	if dns {
@@ -126,8 +130,16 @@ func (s *Server) saveProvider(c *gin.Context, dns bool) {
 		if in.DNS.SecretKey == "" {
 			in.DNS.SecretKey = old.SecretKey
 		}
-		if in.DNS.Accounts == nil {
-			in.DNS.Accounts = old.Accounts
+		if in.DNS.Kind == "acme-dns" {
+			if in.DNS.APIBase != "" || in.DNS.Accounts != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "CNAME validation is managed by CertCenter; registration credentials are not accepted"})
+				return
+			}
+			in.DNS.APIBase, in.DNS.Accounts = old.APIBase, old.Accounts
+			if old.APIBase == "" && s.delegatedDNS == nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "configure the built-in acme_dns listener first"})
+				return
+			}
 		}
 		if p.DNS == nil {
 			p.DNS = map[string]certconfig.DNS{}
