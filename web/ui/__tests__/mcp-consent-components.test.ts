@@ -19,6 +19,7 @@ const data = {
 } as PageData
 const fetchMock = vi.fn()
 beforeEach(() => {
+  vi.mocked(notify).mockClear()
   vi.stubGlobal('fetch', fetchMock)
   vi.stubGlobal('location', { assign: vi.fn() })
   fetchMock
@@ -86,5 +87,55 @@ it('allows denial and displays failures only as toasts', async () => {
   expect(wrapper.text()).not.toContain('invalid_request')
   expect(location.assign).not.toHaveBeenCalled()
   expect(wrapper.get('button.btn-outline').attributes('disabled')).toBeUndefined()
+  wrapper.unmount()
+})
+
+function cursorConsent() {
+  return mount(MCPConsentPage, {
+    props: {
+      data: {
+        ...data,
+        consent: { ...data.consent!, redirectUri: 'cursor://anysphere.cursor-mcp/oauth/callback' },
+      },
+      page: createPage(data),
+    },
+  })
+}
+
+it.each([true, false])('returns a Cursor consent decision: approve=%s', async (approve) => {
+  const query = approve ? 'code=issued&state=state' : 'error=access_denied&state=state'
+  const redirect = `cursor://anysphere.cursor-mcp/oauth/callback?${query}`
+  fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ redirect })))
+  const wrapper = cursorConsent()
+  if (approve) {
+    await wrapper.get('button.btn').trigger('click')
+    await flushPromises()
+    await wrapper.get('dialog form').trigger('submit')
+  } else {
+    await wrapper.get('button.btn-outline').trigger('click')
+  }
+  await flushPromises()
+  expect(location.assign).toHaveBeenCalledWith(redirect)
+  expect(notify).not.toHaveBeenCalled()
+  wrapper.unmount()
+})
+
+it.each([
+  'cursor://another-app/oauth/callback?code=issued',
+  'other-app://anysphere.cursor-mcp/oauth/callback?code=issued',
+  'cursor://anysphere.cursor-mcp/other-command?code=issued',
+  'cursor://anysphere.cursor-mcp:1234/oauth/callback?code=issued',
+  'cursor://user@anysphere.cursor-mcp/oauth/callback?code=issued',
+  'cursor://:password@anysphere.cursor-mcp/oauth/callback?code=issued',
+])('rejects native callback substitution: %s', async (redirect) => {
+  fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ redirect })))
+  const wrapper = cursorConsent()
+  await wrapper.get('button.btn').trigger('click')
+  await flushPromises()
+  await wrapper.get('dialog form').trigger('submit')
+  await flushPromises()
+  expect(location.assign).not.toHaveBeenCalled()
+  expect(notify).toHaveBeenCalledTimes(1)
+  expect(wrapper.get('dialog').element.open).toBe(true)
   wrapper.unmount()
 })

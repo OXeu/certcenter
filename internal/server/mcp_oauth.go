@@ -58,6 +58,9 @@ func validRedirect(raw string) bool {
 	if err != nil || u.Hostname() == "" || u.User != nil || u.Fragment != "" || len(raw) > 2048 {
 		return false
 	}
+	if raw == "cursor://anysphere.cursor-mcp/oauth/callback" {
+		return true
+	}
 	if u.Scheme == "https" {
 		return true
 	}

@@ -23,7 +23,13 @@ async function decide(approve: boolean) {
     })) as { redirect: string }
     const target = new URL(result.redirect)
     const expected = new URL(consent.value.redirectUri)
-    if (target.origin !== expected.origin || target.pathname !== expected.pathname)
+    if (
+      target.protocol !== expected.protocol ||
+      target.host !== expected.host ||
+      target.pathname !== expected.pathname ||
+      target.username !== expected.username ||
+      target.password !== expected.password
+    )
       throw new Error(msg('error.generic'))
     location.assign(target.href)
   } catch (err) {
