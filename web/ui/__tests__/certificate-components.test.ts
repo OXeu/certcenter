@@ -121,6 +121,7 @@ describe('certificate management', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('example.com')
     expect(wrapper.text()).toContain('2027')
+    expect(wrapper.find('a[href="/domains"]').exists()).toBe(false)
     expect(wrapper.findAll('input, textarea')).toHaveLength(0)
     const edit = wrapper.findAll('button').find((button) => button.text() === 'Edit')!
     await edit.trigger('click')

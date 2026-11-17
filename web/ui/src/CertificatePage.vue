@@ -45,7 +45,6 @@ onUnmounted(() => {
 
 <template>
   <div class="my-4 flex flex-wrap gap-2">
-    <a v-if="!isDomains" class="btn-ghost" href="/domains">{{ msg('cert.domains') }}</a>
     <button class="btn-outline" :disabled="state.busy" @click="refresh">
       {{ msg('common.refresh') }}
     </button>
