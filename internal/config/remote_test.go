@@ -18,7 +18,7 @@ import (
 func TestRemoteSettingsOverrideAllLocalOperationalVariables(t *testing.T) {
 	settings := map[string]any{"addr": "127.0.0.1:9090", "database_driver": "sqlite", "database_dsn": "file:remote?mode=memory&cache=shared", "public_url": "https://cert.example.com", "encryption_key": base64.StdEncoding.EncodeToString(make([]byte, 32)), "allow_registration": true, "oauth": map[string]string{"issuer_url": "https://id.example.com", "client_id": "remote-client", "client_secret": "remote-secret"}}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "ApiKey cc_bootstrap" {
+		if r.Header.Get("Authorization") != "Bearer cc_bootstrap" {
 			t.Error("bootstrap key missing")
 		}
 		raw, err := json.Marshal(settings)
@@ -54,6 +54,11 @@ func TestRemoteStartupInitializesAllMissingDefaults(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
+		if r.Header.Get("Authorization") != "Bearer cc_bootstrap" {
+			t.Error("bootstrap bearer token missing")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		switch r.URL.Path {
 		case "/api/v1/agent/project":
 			json.NewEncoder(w).Encode(map[string]any{"project": map[string]string{"slug": "certcenter"}})

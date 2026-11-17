@@ -86,7 +86,7 @@ func certificateFlows(t *testing.T) (*flows, *Server) {
 	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
-		if r.Header.Get("Authorization") != "ApiKey cc_test" {
+		if r.Header.Get("Authorization") != "Bearer cc_test" {
 			t.Error("SDK key missing")
 		}
 		if r.URL.Path == "/api/v1/agent/project" {
