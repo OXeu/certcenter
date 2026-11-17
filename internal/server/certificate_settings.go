@@ -103,6 +103,20 @@ func requiresRestart(current, stored config.Config) bool {
 	if err := stored.Validate(); err != nil {
 		return true
 	}
+	for _, cfg := range []*config.Config{&current, &stored} {
+		if len(cfg.Groups.Mapping) == 0 {
+			cfg.Groups.Mapping = nil
+		}
+		if len(cfg.Groups.AdminGroups) == 0 {
+			cfg.Groups.AdminGroups = nil
+		}
+		if len(cfg.OAuth.Scopes) == 0 {
+			cfg.OAuth.Scopes = nil
+		}
+		if len(cfg.ACMEDNS.Addresses) == 0 {
+			cfg.ACMEDNS.Addresses = nil
+		}
+	}
 	return fmt.Sprintf("%#v", current) != fmt.Sprintf("%#v", stored)
 }
 

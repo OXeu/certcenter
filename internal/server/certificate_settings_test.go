@@ -347,3 +347,21 @@ func TestSettingsWriteFailureKeepsStoredConfiguration(t *testing.T) {
 		t.Fatal("failed write disclosed submitted secret")
 	}
 }
+
+func TestSettingsEmptyCollectionsDoNotRequireRestart(t *testing.T) {
+	f, s := settingsFlows(t, false)
+	s.cfg.Groups.Mapping = nil
+	s.cfg.Groups.AdminGroups = nil
+	if err := s.cfg.Remote.Write(t.Context(), "certcenter.server", s.cfg); err != nil {
+		t.Fatal(err)
+	}
+	body := settingsView(t, f)
+	status, body := settingsWrite(f, "access", body["server_version"], map[string]any{"mapping": map[string]string{}, "admin_groups": []string{}})
+	if status != http.StatusOK || body["restart_required"] != false {
+		t.Fatal("empty groups falsely require restart", status, body)
+	}
+	status, body = settingsWrite(f, "dns", body["server_version"], map[string]any{"zone": "", "addresses": []string{}})
+	if status != http.StatusOK || body["restart_required"] != false {
+		t.Fatal("empty DNS addresses falsely require restart", status, body)
+	}
+}
