@@ -127,6 +127,7 @@ func TestProviderCreationSelectionAndDeletion(t *testing.T) {
 		path, name, field string
 		value             any
 	}{
+		{"/api/v1/dns-providers", "cloudflare", "dns", certconfig.DNS{Kind: "cloudflare", APIToken: "cloudflare-secret"}},
 		{"/api/v1/dns-providers", "new-dns", "dns", certconfig.DNS{Kind: "tencentcloud", AccessKey: "new-id", SecretKey: "new-secret"}},
 		{"/api/v1/upstreams", "new-cloud", "upstream", certconfig.Upstream{Kind: "tencentcloud", AccessKey: "new-id", SecretKey: "new-secret"}},
 		{"/api/v1/upstreams", "new-ssh", "upstream", certconfig.Upstream{Kind: "ssh", Address: "host:22", User: "deploy", PrivateKey: "ssh-secret", HostKey: "ssh-host-public", CertificatePath: "/cert.pem", KeyPath: "/key.pem"}},
@@ -153,7 +154,7 @@ func TestProviderCreationSelectionAndDeletion(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, secret := range []string{"ssh-secret", "acme-secret", "acme-user", "new-id", "new-secret"} {
+		for _, secret := range []string{"ssh-secret", "cloudflare-secret", "acme-secret", "acme-user", "new-id", "new-secret"} {
 			if strings.Contains(string(raw), secret) {
 				t.Fatal("credential leaked", secret)
 			}
@@ -174,6 +175,10 @@ func TestProviderCreationSelectionAndDeletion(t *testing.T) {
 			t.Fatal(err)
 		}
 		switch tc.name {
+		case "cloudflare":
+			if stored.DNS[tc.name].APIToken != "cloudflare-secret" {
+				t.Fatal("Cloudflare token was discarded")
+			}
 		case "new-ssh":
 			if stored.Upstreams[tc.name].PrivateKey != "ssh-secret" {
 				t.Fatal("SSH key was discarded")

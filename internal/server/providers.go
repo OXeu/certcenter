@@ -120,6 +120,9 @@ func (s *Server) saveProvider(c *gin.Context, dns bool) {
 		if in.DNS.AccessKey == "" {
 			in.DNS.AccessKey = old.AccessKey
 		}
+		if in.DNS.APIToken == "" {
+			in.DNS.APIToken = old.APIToken
+		}
 		if in.DNS.SecretKey == "" {
 			in.DNS.SecretKey = old.SecretKey
 		}

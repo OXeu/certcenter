@@ -230,5 +230,8 @@
   "providers.empty": "暂无账号，请先添加。",
   "providers.keepAccounts": "留空保留注册账号。填写 JSON 对象会替换全部注册信息及其凭据。",
   "docs.config": "配置指南",
-  "docs.operations": "自动化与运行"
+  "docs.operations": "自动化与运行",
+  "providers.cloudflare": "Cloudflare",
+  "providers.api_token": "Cloudflare API Token",
+  "providers.cloudflareHelp": "请授予需要管理的域名区域 Zone / Zone / Read 和 Zone / DNS / Edit 权限。"
 }

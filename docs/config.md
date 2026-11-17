@@ -84,6 +84,7 @@ MySQL 示例：`database_driver` 为 `mysql`，`database_dsn` 为 `user:password
       "region": "cn-hangzhou"
     },
     "tencent-dns": { "kind": "tencentcloud", "access_key": "ID", "secret_key": "SECRET" },
+    "cloudflare-dns": { "kind": "cloudflare", "api_token": "填写限定域名权限的 API Token" },
     "delegated": {
       "kind": "acme-dns",
       "api_base": "https://auth.example.net",
@@ -122,6 +123,10 @@ MySQL 示例：`database_driver` 为 `mysql`，`database_dsn` 为 `user:password
 删除不使用的 provider 条目；每个配置条目都需要有效的必填字段。DNS provider 和 upstream 分别通过独立接口扩展。腾讯云账号需要 DNSPod TXT 写入/删除或 SSL `UploadCertificate` 对应权限；阿里云需要 AliDNS TXT 权限或 `yundun-cert:UploadUserCertificate`。DNS 与部署凭据分开配置，可使用不同的权限受限账号。
 
 `accept_terms` 表示运营者已接受所选 CA 的条款；未接受时签发失败，不自动替运营者接受。初次测试请使用 staging；其证书不受浏览器信任。确认后改用生产目录 `https://acme-v02.api.letsencrypt.org/directory` 并重新签发。不同 CA/邮箱有独立且持久的加密 ACME 账户密钥。
+
+### Cloudflare DNS
+
+在“DNS 服务商”页面选择 Cloudflare，填写 API Token。Token 需要管理目标区域的 `Zone / Zone / Read` 和 `Zone / DNS / Edit` 权限；不需要账号邮箱或 Global API Key。签发时创建 TXT，完成后按该次创建的记录 ID 删除。编辑时 Token 留空保留原值，不向浏览器回传已有 Token。权限依据：[lego Cloudflare 文档](https://go-acme.github.io/lego/dns/cloudflare/index.html)。
 
 ### acme-dns 委派
 

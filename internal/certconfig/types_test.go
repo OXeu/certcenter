@@ -49,3 +49,14 @@ func TestLongDomainKeysRespectConfigCenterLimit(t *testing.T) {
 		t.Fatal("short domain keys changed")
 	}
 }
+
+func TestCloudflareDNSValidation(t *testing.T) {
+	p := Providers{ACME: ACME{DirectoryURL: "https://ca.example/directory", Email: "admin@example.com"}, DNS: map[string]DNS{"cf": {Kind: "cloudflare"}}}
+	if err := p.Validate(); err == nil {
+		t.Fatal("Cloudflare token was optional")
+	}
+	p.DNS["cf"] = DNS{Kind: "cloudflare", APIToken: "token"}
+	if err := p.Validate(); err != nil {
+		t.Fatal(err)
+	}
+}

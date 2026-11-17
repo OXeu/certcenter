@@ -75,8 +75,10 @@ GET 返回 `{ "version": "…", "providers": [{ "name": "…", "fields": { "kind
 }
 ```
 
-创建上游使用相同结构，把 `dns` 换为 `upstream`。DNS 类型为 `alidns`、`tencentcloud`、`acme-dns`；上游类型为 `aliyun`、`tencentcloud`、`ssh`。各类型字段见[配置指南](/docs/config)。创建成功返回 `204`，新账号随即出现在域名详情的 `dns_providers` / `upstreams` 中。
+创建上游使用相同结构，把 `dns` 换为 `upstream`。DNS 类型为 `alidns`、`tencentcloud`、`cloudflare`、`acme-dns`；上游类型为 `aliyun`、`tencentcloud`、`ssh`。各类型字段见[配置指南](/docs/config)。创建成功返回 `204`，新账号随即出现在域名详情的 `dns_providers` / `upstreams` 中。
 
-编辑使用 PUT，账号名称来自路径且类型不可变；提交完整的非敏感字段。`access_key`、`secret_key` 和 `private_key` 留空或省略表示保留原值。acme-dns 的 `accounts` 省略或为 `null` 表示保留，提供对象则整体替换，包括所有注册凭据。修改已有账号类型应新建账号后迁移策略。
+编辑使用 PUT，账号名称来自路径且类型不可变；提交完整的非敏感字段。`access_key`、`secret_key`、Cloudflare 的 `api_token` 和 `private_key` 留空或省略表示保留原值。acme-dns 的 `accounts` 省略或为 `null` 表示保留，提供对象则整体替换，包括所有注册凭据。修改已有账号类型应新建账号后迁移策略。
 
 删除请求体为 `{ "version": "列表 GET 返回的版本" }`。删除及编辑成功返回 `204`；缺失凭据等验证错误返回 `400`，同名创建、版本过期或破坏策略引用返回 `409`。版本覆盖整个 provider 配置，另一类账号的修改也会使旧版本失效；它只能保护当前管理实例中的写入，外部 ConfigCenter 写入仍需避免并发覆盖。
+
+Cloudflare 账号的创建请求中 `dns` 为 `{ "kind": "cloudflare", "api_token": "…" }`，已有 Token 不会通过列表接口返回。

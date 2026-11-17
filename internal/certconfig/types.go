@@ -27,6 +27,7 @@ type ACME struct {
 
 // DNS selects an explicitly configured DNS provider.
 type DNS struct {
+	APIToken  string                `json:"api_token"`
 	Kind      string                `json:"kind"`
 	AccessKey string                `json:"access_key"`
 	SecretKey string                `json:"secret_key"`
@@ -164,6 +165,10 @@ func (p Providers) Validate() error {
 		case "alidns", "tencentcloud":
 			if d.AccessKey == "" || d.SecretKey == "" {
 				return errors.New("DNS API credentials are required")
+			}
+		case "cloudflare":
+			if strings.TrimSpace(d.APIToken) == "" {
+				return errors.New("cloudflare API token is required")
 			}
 		case "acme-dns":
 			if !httpsURL(d.APIBase) {

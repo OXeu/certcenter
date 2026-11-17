@@ -15,7 +15,7 @@ export function createProviderWorkspace(data: PageData, page: PageContext) {
   const base = dns ? '/api/v1/dns-providers' : '/api/v1/upstreams'
   const state = reactive({ busy: false, version: '', providers: [] as Provider[] })
   const form = createForm(page)
-  const kinds = dns ? ['alidns', 'tencentcloud', 'acme-dns'] : ['aliyun', 'tencentcloud', 'ssh']
+  const kinds = dns ? ['alidns', 'tencentcloud', 'cloudflare', 'acme-dns'] : ['aliyun', 'tencentcloud', 'ssh']
   async function load() {
     const result = (await api(base)) as Registry
     state.version = result.version
@@ -61,6 +61,7 @@ export function createProviderWorkspace(data: PageData, page: PageContext) {
       },
       makeField('access_key', cloud, true, true),
       makeField('secret_key', cloud, true, true),
+      { ...makeField('api_token', ['cloudflare'], true, true), help: provider ? 'providers.keepSecret' : 'providers.cloudflareHelp' },
       makeField('region', cloud, false),
       ...(dns
         ? [

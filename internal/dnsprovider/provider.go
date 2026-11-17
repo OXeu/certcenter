@@ -15,6 +15,7 @@ import (
 	"github.com/go-acme/lego/v4/challenge"
 	"github.com/go-acme/lego/v4/challenge/dns01"
 	"github.com/go-acme/lego/v4/providers/dns/alidns"
+	"github.com/go-acme/lego/v4/providers/dns/cloudflare"
 	"github.com/go-acme/lego/v4/providers/dns/tencentcloud"
 )
 
@@ -23,6 +24,11 @@ type Provider interface {
 	challenge.Provider
 	Timeout() (time.Duration, time.Duration)
 }
+
+type transport func(*http.Request) (*http.Response, error)
+
+// RoundTrip propagates the operation context to provider HTTP requests.
+func (fn transport) RoundTrip(req *http.Request) (*http.Response, error) { return fn(req) }
 
 type callbacks struct {
 	present func(string, string, string) error
@@ -48,6 +54,14 @@ func New(ctx context.Context, cfg certconfig.DNS) (Provider, error) {
 		provider, err = alidns.NewDNSProviderConfig(&alidns.Config{APIKey: cfg.AccessKey, SecretKey: cfg.SecretKey, RegionID: cfg.Region, TTL: 600, PropagationTimeout: 180 * time.Second, PollingInterval: 2 * time.Second, HTTPTimeout: 30 * time.Second})
 	case "tencentcloud":
 		provider, err = tencentcloud.NewDNSProviderConfig(&tencentcloud.Config{SecretID: cfg.AccessKey, SecretKey: cfg.SecretKey, Region: cfg.Region, TTL: 600, PropagationTimeout: 180 * time.Second, PollingInterval: 2 * time.Second, HTTPTimeout: 30 * time.Second})
+	case "cloudflare":
+		provider, err = cloudflare.NewDNSProviderConfig(&cloudflare.Config{AuthToken: cfg.APIToken, PropagationTimeout: 180 * time.Second, PollingInterval: 2 * time.Second, TTL: 120, HTTPClient: &http.Client{Timeout: 30 * time.Second, Transport: transport(func(req *http.Request) (*http.Response, error) {
+			response, err := http.DefaultTransport.RoundTrip(req.Clone(ctx))
+			if err != nil {
+				return nil, fmt.Errorf("cloudflare request: %w", err)
+			}
+			return response, nil
+		})}})
 	case "acme-dns":
 		provider = callbacks{present: func(domain, _, key string) error { return presentDelegated(ctx, cfg, domain, key) }, cleanup: func(_, _, _ string) error { return nil }}
 	default:

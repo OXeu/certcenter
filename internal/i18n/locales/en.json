@@ -230,5 +230,8 @@
   "providers.empty": "No accounts configured. Add an account to begin.",
   "providers.keepAccounts": "Leave blank to keep registrations. A JSON object replaces all registrations, including their credentials.",
   "docs.config": "Configuration",
-  "docs.operations": "Operations"
+  "docs.operations": "Operations",
+  "providers.cloudflare": "Cloudflare",
+  "providers.api_token": "Cloudflare API token",
+  "providers.cloudflareHelp": "Grant Zone / Zone / Read and Zone / DNS / Edit for the zones to manage."
 }

@@ -105,6 +105,24 @@ describe('provider management', () => {
     expect(fetchMock.mock.calls[1][1].method).toBe('DELETE')
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ version: 'revision' })
   })
+  it('creates Cloudflare with an API token and no unrelated credentials', async () => {
+    const dnsData = { ...data, page: 'dns-providers' as const }
+    const workspace = createProviderWorkspace(dnsData, createPage(dnsData))
+    await workspace.refresh()
+    workspace.edit()
+    Object.assign(workspace.form.values, {
+      kind: 'cloudflare',
+      name: 'cf',
+      api_token: 'cloudflare-secret',
+    })
+    await workspace.form.submit()
+    expect(workspace.form.error).toBe('')
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/v1/dns-providers')
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).dns).toEqual({
+      kind: 'cloudflare',
+      api_token: 'cloudflare-secret',
+    })
+  })
   it('validates acme-dns JSON without exposing supplied credentials in errors', async () => {
     const dnsData = { ...data, page: 'dns-providers' as const }
     const workspace = createProviderWorkspace(dnsData, createPage(dnsData))
