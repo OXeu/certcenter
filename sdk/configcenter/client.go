@@ -1,8 +1,9 @@
-// Package configcenter is the Go client for a configcenter server.
+// Package configcenter reads and writes remote or local configuration.
 //
 // The client authenticates with an API key issued for one project. It carries
 // no project name: the key itself is bound to a project, so a key can never
-// read another project's configuration.
+// read another project's configuration. Without a server URL and API key,
+// the client uses a local bbolt database.
 package configcenter
 
 import (
@@ -26,8 +27,14 @@ var (
 	ErrKeyNotFound = errors.New("configcenter: key not found")
 )
 
-// Config describes how to reach a server.
+// Config selects a remote connection or local configuration storage.
 type Config struct {
+	// LocalPath selects the fallback bbolt file, relative to the working directory.
+	// Empty uses DefaultLocalPath. Ignored when remote configuration is complete.
+	LocalPath string
+	// LocalDefaults initializes missing keys atomically in the local environment.
+	// Existing values and remote configuration are never overwritten.
+	LocalDefaults map[string]string
 	// BaseURL is the server root, for example http://127.0.0.1:8080.
 	BaseURL string
 	// APIKey is the token created on the project's API keys page.
@@ -55,20 +62,33 @@ type WatchOptions struct {
 	OnError func(error)
 }
 
-// Client reads configuration of the API key's project.
+// Client accesses a remote project or an environment in a local KV database.
 type Client struct {
+	local    *localStore
 	endpoint string
 	apiKey   string
 	env      string
 	http     *http.Client
 
-	mu    sync.RWMutex
-	items map[string]string
-	order []Item
+	mu     sync.RWMutex
+	items  map[string]string
+	order  []Item
+	prefix string
 }
 
 // New validates cfg and returns a client.
 func New(cfg Config) (*Client, error) {
+	env := cfg.Environment
+	if env == "" {
+		env = "production"
+	}
+	if cfg.BaseURL == "" && cfg.APIKey == "" {
+		local, err := newLocalStore(cfg.LocalPath, env, cfg.LocalDefaults)
+		if err != nil {
+			return nil, err
+		}
+		return &Client{local: local, env: env, items: map[string]string{}}, nil
+	}
 	if cfg.BaseURL == "" {
 		return nil, errors.New("configcenter: BaseURL is required")
 	}
@@ -76,8 +96,8 @@ func New(cfg Config) (*Client, error) {
 		return nil, errors.New("configcenter: a cc_ API key is required")
 	}
 	base, err := url.Parse(strings.TrimRight(cfg.BaseURL, "/"))
-	if err != nil || base.Scheme == "" || base.Host == "" {
-		return nil, fmt.Errorf("configcenter: invalid BaseURL %q", cfg.BaseURL)
+	if err != nil || (base.Scheme != "http" && base.Scheme != "https") || base.Host == "" || base.User != nil || base.RawQuery != "" || base.Fragment != "" {
+		return nil, errors.New("configcenter: BaseURL must be an HTTP(S) URL without credentials, query or fragment")
 	}
 	client := cfg.HTTPClient
 	if client == nil {
@@ -87,10 +107,6 @@ func New(cfg Config) (*Client, error) {
 		}
 		client = &http.Client{Timeout: timeout}
 	}
-	env := cfg.Environment
-	if env == "" {
-		env = "production"
-	}
 	return &Client{
 		endpoint: base.String() + "/api/v1/agent",
 		apiKey:   cfg.APIKey,
@@ -99,6 +115,9 @@ func New(cfg Config) (*Client, error) {
 		items:    map[string]string{},
 	}, nil
 }
+
+// IsLocal reports whether this client uses the local fallback database.
+func (c *Client) IsLocal() bool { return c.local != nil }
 
 // Environment returns the environment slug the client reads.
 func (c *Client) Environment() string {
@@ -116,6 +135,16 @@ func (c *Client) LoadPrefix(ctx context.Context, prefix string) error {
 }
 
 func (c *Client) load(ctx context.Context, prefix string) error {
+	if c.local != nil {
+		c.local.mu.Lock()
+		defer c.local.mu.Unlock()
+		items, err := c.local.read(ctx, prefix)
+		if err != nil {
+			return err
+		}
+		c.replace(items, prefix)
+		return nil
+	}
 	query := url.Values{}
 	if prefix != "" {
 		query.Set("prefix", prefix)
@@ -127,7 +156,7 @@ func (c *Client) load(ctx context.Context, prefix string) error {
 	if err := c.get(ctx, path, query, &body); err != nil {
 		return err
 	}
-	c.replace(body.Items)
+	c.replace(body.Items, prefix)
 	return nil
 }
 
@@ -160,11 +189,12 @@ func (c *Client) get(ctx context.Context, path string, query url.Values, out any
 	return nil
 }
 
-func (c *Client) replace(items []Item) {
+func (c *Client) replace(items []Item, prefix string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.items = make(map[string]string, len(items))
 	c.order = items
+	c.prefix = prefix
 	for _, item := range items {
 		c.items[item.Key] = item.Value
 	}
