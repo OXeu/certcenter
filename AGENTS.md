@@ -1,12 +1,15 @@
 # AGENTS.md
 
-Rules for anyone (human or model) changing configcenter. They are enforced where a tool exists; where a rule is judgement, it is listed as such.
+Rules for anyone (human or model) changing certcenter. They are enforced where a tool exists; where a rule is judgement, it is listed as such.
 
 ## Layout
 
-- `cmd/configcenter` — main, flags-free, environment driven. `internal/config` loads `.env.local` (or `CC_ENV_FILE`) with godotenv before reading variables; exported variables are never overridden. Never print secret values.
+- `cmd/certcenter` — main, flags-free, environment driven. `internal/config` loads `.env.local` (or `CC_ENV_FILE`) for ConfigCenter connection bootstrap, then reads settings through the SDK; exported bootstrap variables are never overridden. Never print secret values.
 - `internal/config` — loads the env file and reads every environment variable here and nowhere else.
-- `internal/store` — gorm models and all queries; one `Store` method per query.
+- `internal/store` — gorm models and all queries; one `Store` method per query. Certificate material and ACME keys are encrypted in the database.
+- `internal/certconfig` — ConfigCenter SDK settings, domain policies and provider credentials.
+- `internal/certificates` — ACME issuance, persistent jobs, renewal scheduling and deployment coordination.
+- `internal/dnsprovider` / `internal/upstream` — DNS validation and certificate deployment adapters.
 - `internal/auth` — sessions, roles, CSRF, API-key and agent middleware, OAuth provider adapter.
 - `internal/oauth` — the RFC 6749 + OIDC client (discovery, PKCE, id_token verification, userinfo fallback).
 - `internal/server` — gin router, REST handlers, MCP endpoint, Go templates (`templates/shell/vue.html`), embedded static files.
@@ -73,7 +76,7 @@ Commit messages follow [`docs/commits.md`](docs/commits.md): Conventional Commit
 
 ## Definition of done
 
-`make check` passes: Vite Plus production build, Go lint and tests, Oxlint, strict Vue type checks, Vitest, and SDK lint and tests. `make build` produces `.tmp/bin/configcenter`. Commit working changes according to `docs/commits.md` and finish with a clean `git status`. Build artifacts remain ignored under `.tmp/`.
+`make check` passes: Vite Plus production build, Go lint and tests, Oxlint, strict Vue type checks, Vitest, and SDK lint and tests. `make build` produces `.tmp/bin/certcenter`. Commit working changes according to `docs/commits.md` and finish with a clean `git status`. Build artifacts remain ignored under `.tmp/`.
 
 ## Dangerous UI actions
 

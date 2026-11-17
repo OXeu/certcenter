@@ -1,175 +1,62 @@
-<h1 align="center">
-  <img src="assets/icon-128.webp" width="64" height="64" alt="" align="middle" />
-  configcenter
-</h1>
+# CertCenter
 
-Self-hosted configuration service: projects as isolation boundaries, environments, OAuth single sign-on, API keys with configurable project and operation scopes, a responsive Vue web UI and an MCP endpoint for agents.
+证书签发、续期与部署管理平台，从 ConfigCenter 复制，保留 Go / Gin / GORM、OAuth 登录、Vue 3 和共享对话框。
 
-## Integration documentation
+- **域名工作区**：按所有者隔离，展示证书策略、SAN、有效期、历史版本、签发和部署日志。
+- **ACME**：使用 lego；DNS API 支持腾讯云 DNSPod、阿里云 DNS；另支持 acme-dns 的 `_acme-challenge` CNAME 委派。
+- **部署**：腾讯云 SSL 和阿里云 CAS 证书库上传；SSH/SFTP 安装证书、私钥并执行可选的重载命令。
+- **自动化**：持久化任务队列、任务互斥、过期租约恢复、每分钟检查续期、失败后一小时重试、成功上传回执去重。短生命周期证书的续期窗口不超过证书有效期的三分之一。
+- **存储**：统一 `certificates.Repository` 接口，GORM 适配 SQLite / MySQL。证书历史、私钥、ACME 账户和日志保存在数据库；密钥材料以 AES-256-GCM 加密。
+- **配置**：服务设置、DNS 凭据、上游、域名及续签策略均通过 ConfigCenter Go SDK 读写。环境变量仅用于连接 ConfigCenter。
 
-Open `/docs/` on your running server for the integration documentation. Public Markdown endpoints `/docs/index.md`, `/docs/api.md`, `/docs/sdk.md` and `/docs/mcp.md` support agents without JavaScript or login. Sources: [overview](docs/index.md), [HTTP API](docs/api.md), [Go SDK](docs/sdk.md), [MCP](docs/mcp.md). The guides are embedded in the Go binary. Documentation pages share the application header, design tokens and saved light/dark theme; their content is pre-rendered with Shiki code highlighting at build time and Markdown endpoints remain public. Shiki generates light/dark token styles in an external stylesheet, keeping the CSP intact and adding no browser-side highlighter.
+## 启动
 
-## Stack
+需要 Go 1.26.10、Node.js 24+、npm 和 golangci-lint v2。在 ConfigCenter 中创建专用项目和 `production` 环境，为单项目 API key 授予 `projects:read`、`environments:read`、`config:read`、`config:write`。
 
-Go 1.26, gin, gorm (SQLite), a Go HTML/JSON shell plus Vue 3 (built with Vite Plus), shadcn/ui-style Tailwind CSS with Remix Icon (font vendored, no inline SVG), transient messages as [ding](https://github.com/YusufCeng1z/ding) toasts instead of inline alert elements, a plain OAuth 2.0 authorization-code + PKCE client that works with any OIDC issuer (or a plain OAuth server with a userinfo endpoint).
+1. 按 [配置指南](docs/sdk.md) 创建 `certcenter.server` 和 `certcenter.providers` 两个 JSON 配置项。
+2. 创建本机 `.env.local`，只填连接引导配置：
 
-## Quick start
+   ```dotenv
+   CC_CONFIGCENTER_URL=https://config.example.com
+   CC_CONFIGCENTER_API_KEY=cc_your_project_scoped_key
+   CC_CONFIGCENTER_ENVIRONMENT=production
+   ```
 
-```sh
-make build          # bundles the web assets, then builds .tmp/bin/configcenter
-CC_OAUTH_ISSUER=https://idp.example.com \
-CC_OAUTH_CLIENT_ID=configcenter \
-CC_OAUTH_CLIENT_SECRET=... \
-.tmp/bin/configcenter
-```
+   可通过 `CC_ENV_FILE` 指定另一个文件。已导出的变量优先，凭据不写入版本库。
 
-Open http://127.0.0.1:8080. Without OAuth configured the server still starts; only the login link is disabled.
+3. 构建并启动：
 
-GitHub can be used as the identity provider (`CC_OAUTH_ISSUER=https://github.com`, a GitHub OAuth app with the callback `CC_PUBLIC_URL/oauth/callback`): GitHub publishes no OIDC discovery document, so the client falls back to GitHub's documented OAuth endpoints, sends the client ID and secret in the token request form, skips `openid`/PKCE, reads the profile from `/user` and the primary address from `/user/emails`. Accounts without a public email get `<id>@github.com`.
+   ```sh
+   npm ci
+   make check
+   make build
+   ./.tmp/bin/certcenter
+   ```
 
-## Configuration
+4. 默认地址为 `127.0.0.1:8081`。使用配置好的 OAuth 提供者登录，管理员在“域名”页添加域名和所有者；进入域名后添加证书策略，再执行签发或启用自动续签。
 
-All settings come from the environment (read once in `internal/config`). The binary loads `.env.local` itself with [godotenv](https://github.com/joho/godotenv) (`CC_ENV_FILE` selects another file); variables already exported win over the file, so `CC_ADDR=127.0.0.1:9000 .tmp/bin/configcenter` and `CC_ADDR=… make run` both work, and a missing file is fine. `CC_OAUTH_ISSUER` and `CC_PUBLIC_URL` are trimmed of trailing slashes, and startup logs the resulting address, public URL and OAuth state.
+生产环境应运行常驻进程，并使用持久数据库。原项目的 SCF 自动部署已移除，避免请求冻结期间续期任务停止，也避免部署到原项目服务。副本保留原 Git 历史，但移除了指向 ConfigCenter 的远端。
 
-| Variable                                        | Default                       | Meaning                                                                  |
-| ----------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
-| `CC_ADDR`                                       | `127.0.0.1:8080`              | Listen address                                                           |
-| `CC_DB_DRIVER`                                  | `sqlite`                      | Database backend: `sqlite` or `mysql`                                    |
-| `CC_DB`                                         | `file:configcenter.db`        | SQLite or MySQL DSN                                                      |
-| `CC_PUBLIC_URL`                                 | `http://127.0.0.1:8080`       | Public base URL                                                          |
-| `CC_OAUTH_ISSUER`                               |                               | OIDC issuer (discovery at `/.well-known/openid-configuration`)           |
-| `CC_OAUTH_CLIENT_ID` / `CC_OAUTH_CLIENT_SECRET` |                               | OAuth client; redirect URI is `CC_PUBLIC_URL/oauth/callback`             |
-| `CC_OAUTH_SCOPES`                               | `openid profile email groups` | Requested scopes                                                         |
-| `CC_OAUTH_REDIRECT_URL`                         | derived                       | Override the callback URL                                                |
-| `CC_OAUTH_GROUPS_CLAIM`                         | `groups`                      | Claim used for group mapping                                             |
-| `CC_OAUTH_ADMIN_GROUPS`                         | `configcenter-admin`          | Groups that grant the admin role                                         |
-| `CC_OAUTH_GROUP_MAP`                            |                               | `group:role,…` for user/admin defaults                                   |
-| `CC_SESSION_SECRET`                             |                               | Required when `CC_ENV=production`                                        |
-| `CC_LANGUAGES`                                  | `en,zh-CN`                    | Enabled UI languages; tags must match `internal/i18n/locales/<tag>.json` |
-| `CC_BOOTSTRAP_ADMIN_EMAIL` / `_NAME`            | `admin@localhost` / `admin`   | First administrator, created when the user table is empty                |
+默认 SQLite 数据库位于 `.tmp/certcenter.db`，仅用于本地运行；生产可在远端配置中指定持久 SQLite 路径或 MySQL。备份数据库及 ConfigCenter 中的 `encryption_key`，直接替换该密钥会使已有证书和 ACME 账户无法解密；当前未实现密钥轮换迁移。
 
-First login creates the user: linked by OAuth subject, adopted by verified email, otherwise new. Roles are managed afterwards in **Users** (admin only); group membership decides the role only when an account is created.
+## 使用边界
 
-The header theme button switches between light and dark modes. Before a manual choice, the UI follows the system setting; the choice is saved in browser storage and shared across tabs.
+- 云上传返回云端证书 ID，首期不自动绑定 CDN、CLB、WAF 等云产品；SSH 可在上传后运行管理员配置的重载命令。
+- acme-dns 使用已部署的兼容服务，需先注册记录并设置 CNAME；本项目不内置权威 DNS 服务器。
+- 服务地址、数据库、OAuth、加密密钥等启动设置修改后重启生效；域名策略、服务商配置和注册开关实时读取 ConfigCenter。不可用时拒绝新操作，已有证书保持不变。
+- 配置写入使用 SDK 中新增的 `Put`，兼容原 ConfigCenter 管理 API。ConfigCenter 暂无跨实例 CAS；证书任务可共享数据库运行，管理界面的配置写入建议只由一个实例承接，并避免同时在 ConfigCenter 编辑同一域名记录。
+- SSH 要求固定主机公钥、可写的绝对路径和支持 `posix-rename` 的 SFTP 服务。每个文件原子替换，两个文件不构成跨文件事务；写入或重载失败会留下失败日志，可重试。为不同证书策略配置独立目标路径。
 
-## Languages
-
-The UI ships in English and Simplified Chinese (`internal/i18n/locales`). The header dropdown lists `CC_LANGUAGES`, `/language?lang=<tag>` stores the choice in the `cc_lang` cookie and redirects back to the page; without a choice the server negotiates `Accept-Language`. Go supplies translated messages in the page JSON. Vue uses `web/ui/src/i18n.ts` and the same locale catalogs for dialogs, role badges and errors. Add a language by dropping `<tag>.json` into the locales directory and listing the tag in `CC_LANGUAGES`.
-
-## Isolation model
-
-- A **project** is the boundary for configuration, environments and proposals.
-- Each **API key** has explicit `scopes`: project slugs (or `*`) paired with permissions such as `config:read`, `config:write` and `config:delete`. A key can read one project and write another. Permissions are checked independently by REST and MCP.
-- Users manage their own keys at `/keys` and can grant access to projects they own. Administrators can manage all keys and grant wildcard scopes. Key delegation requires `keys:write` and cannot exceed the caller's scope.
-- Editing scopes keeps the token and changes authorization on subsequent requests. Global `users:read/write/delete` and `settings:read/write` permissions support user administration and system settings.
-
-## REST API
-
-Project and key management accept a browser session with `X-CSRF-Token` on mutations, or an API key with the required scopes. User administration and settings require an administrator session. See [HTTP API](docs/api.md) for routes, request bodies and key lifecycle details.
-
-| Method         | Path                                                                   |
-| -------------- | ---------------------------------------------------------------------- |
-| GET            | `/api/v1/me`                                                           |
-| GET/POST       | `/api/v1/keys`, PATCH/DELETE `/api/v1/keys/:id`, POST `…/:id/rotate`   |
-| GET/POST       | `/api/v1/projects`                                                     |
-| PATCH/DELETE   | `/api/v1/projects/:project`                                            |
-| GET/POST       | `/api/v1/projects/:project/environments`                               |
-| DELETE         | `/api/v1/projects/:project/environments/:env`                          |
-| GET            | `/api/v1/projects/:project/environments/:env/items?prefix=`            |
-| GET/PUT/DELETE | `/api/v1/projects/:project/environments/:env/items/:key`               |
-| GET/POST       | `/api/v1/projects/:project/proposals?status=pending`                   |
-| POST           | `/api/v1/projects/:project/proposals/:id/review` (`{"approve": true}`) |
-| GET            | `/api/v1/agent/project` (API key)                                      |
-| GET            | `/api/v1/agent/environments/:env/values?prefix=` (API key, read-only)  |
-| GET            | `/api/v1/users`, PATCH/DELETE `/api/v1/users/:id`                      |
-| GET/PUT        | `/api/v1/settings`                                                     |
-| GET            | `/api/v1/key-scopes`                                                   |
-
-## MCP
-
-See the [MCP guide](docs/mcp.md) for authentication, initialization, all 28 tools, examples and errors.
-
-`POST /mcp` speaks JSON-RPC 2.0 over stateless HTTP POST with JSON responses. Authenticate with `Authorization: ApiKey <token>`; project operations take an explicit `project` argument. API keys may manage multiple projects with independent scopes. Browser sessions can call management tools with their CSRF token and account permissions.
-
-MCP exposes every API operation: project and environment management, configuration reads and writes, proposals and reviews, key lifecycle, user administration, settings and identity. REST and MCP share operation definitions and handlers. Discovery filters tools by granted scopes, and execution validates permissions for the actual target. User and settings scopes require the `*` project range. Results include JSON text and `structuredContent` with the API response and `http_status`.
-
-## Go SDK
-
-`sdk/configcenter` is a separate module (`github.com/OXeu/configcenter/sdk/configcenter`), dependency-free:
-
-```go
-client, err := configcenter.New(configcenter.Config{
-	BaseURL: os.Getenv("CC_URL"), APIKey: os.Getenv("CC_KEY"),
-})
-if err != nil { /* handle */ }
-if err := client.Load(ctx); err != nil { /* handle */ }
-pool := client.Int("db.pool", 10)
-if err := client.Watch(ctx, configcenter.WatchOptions{Interval: 30 * time.Second}); err != nil { /* handle */ }
-```
-
-The key decides the project, so the SDK never takes a project name.
-
-## Development
-
-Use Node 22.18+ or 24.11+ (supported Vite Plus LTS versions), npm and Go 1.26.10, with golangci-lint installed.
+## 开发与验证
 
 ```sh
-npm ci
-make check   # build, Go lint/tests, Oxlint, Vue type checking, Vitest, SDK lint/tests
-make build   # embed .tmp/ui and produce .tmp/bin/configcenter
-make run     # build and start the Go server
-npm run dev # in a second terminal; open http://localhost:5173/projects
+make check
+make build
+npm run dev
 ```
 
-The Vite development server gets authenticated page JSON from Go at `127.0.0.1:8080` and serves Vue with hot reload. API, OAuth, language and logout requests are proxied to Go. Set `CC_PUBLIC_URL=http://localhost:5173` and register that origin's `/oauth/callback` with your provider when testing OAuth through Vite. Production serves embedded JavaScript and CSS directly from Go; Node is only needed at build time.
+Vite 开发服务代理至 `127.0.0.1:8081`。构建输出在 `.tmp/ui`、`.tmp/docs`、`.tmp/bin`。测试使用内存数据库和 `.tmp/` 下的临时文件，覆盖域名隔离、CSRF、策略校验、签发失败保留、自动续签、部分上传重试、任务恢复、加密、云 SDK 请求和 SSH/SFTP。
 
-Vite Plus provides the build, Oxlint, Oxfmt and Vitest. `vue-tsc` checks both scripts and templates. Oxlint custom plugins inspect script ASTs; separate compiler-based Vitest checks enforce template constraints. See [AGENTS.md](AGENTS.md).
+源码边界：`internal/certconfig` 配置模型和 SDK 适配；`internal/dnsprovider` DNS 抽象；`internal/upstream` 部署抽象；`internal/certificates` 签发与调度；`internal/store` 数据库模型和查询；`internal/server` 会话与 HTTP；`web/ui/src` 界面。
 
-Build output stays in ignored `.tmp/ui` and `.tmp/docs` and is embedded by `assets.go`. `npm run build:docs` renders Markdown and Shiki HTML/CSS; `make assets` runs it before the Vite build. Run `make assets` before direct Go commands on a fresh checkout; Make targets do this automatically. Go scratch files use `.tmp`, and binaries use `.tmp/bin`. The live SDK test is opt-in through `CC_TEST_URL` and `CC_TEST_KEY`.
-
-Type checking uses TypeScript 7 (`typescript-native`) for modules, tools and non-component tests. Vue template and component tests use `vue-tsc` with TypeScript 6 because Volar requires its JavaScript compiler API. Run both with `npm run typecheck`.
-
-### MySQL
-
-Local development defaults to SQLite. To connect to MySQL, set:
-
-```dotenv
-CC_DB_DRIVER=mysql
-CC_DB=user:password@tcp(mysql-host:3306)/configcenter?charset=utf8mb4&tls=true
-```
-
-Create the database first (MySQL 8+, utf8mb4 with a case-sensitive collation such
-as utf8mb4_bin). The application creates tables and enables timestamp parsing.
-Keep credentials in environment variables or the ignored .env.local file.
-
-### Tencent Cloud Functions
-
-The GitHub workflow runs `make check`, MySQL integration tests and `make build`.
-Deployments from main are enabled by repository variable `SCF_DEPLOY_ENABLED=true`;
-leave it unset until production configuration is ready.
-
-Configure variables `SCF_REGION`, `SCF_VPC_ID`, `SCF_SUBNET_ID` for the network
-that can reach MySQL. Configure secrets `TENCENT_SECRET_ID`,
-`TENCENT_SECRET_KEY`, and `SCF_RUNTIME_ENV`. The last secret is a dotenv file:
-
-```dotenv
-CC_DB=user:password@tcp(mysql-host:3306)/configcenter?charset=utf8mb4
-CC_SESSION_SECRET=replace-with-a-long-random-secret
-CC_PUBLIC_URL=https://your-domain.example
-CC_OAUTH_ISSUER=https://your-identity-provider.example
-CC_OAUTH_CLIENT_ID=your-client-id
-CC_OAUTH_CLIENT_SECRET=your-client-secret
-CC_BOOTSTRAP_ADMIN_EMAIL=admin@example.com
-```
-
-The workflow packages this file privately with the function code, removes the
-runner copy after deployment, and never uploads the package as a GitHub artifact.
-SCF forces MySQL, production mode and port 9000. The HTTP trigger exposes a
-function URL with public and private access. Cloud-level authentication is NONE;
-the application enforces OAuth sessions and API keys. Set CC_PUBLIC_URL to the
-function URL or its custom domain and register its /oauth/callback URL at the
-identity provider. The VPC must also permit outbound access to the identity provider.
-The selected Tencent action runs serverless-cloud-framework; its source is pinned,
-but its upstream CLI installation is not version-pinned.
-
-Changing the driver does not migrate existing SQLite data to MySQL.
+[使用指南](docs/index.md) · [HTTP API](docs/api.md) · [ConfigCenter 配置](docs/sdk.md) · [自动化说明](docs/mcp.md)
