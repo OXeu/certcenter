@@ -16,9 +16,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/OXeu/center-common/oauth"
 	"github.com/OXeu/certcenter/internal/auth"
 	"github.com/OXeu/certcenter/internal/config"
-	"github.com/OXeu/certcenter/internal/oauth"
 	"github.com/OXeu/certcenter/internal/store"
 )
 

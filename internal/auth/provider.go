@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/OXeu/certcenter/internal/oauth"
+	"github.com/OXeu/center-common/oauth"
 	"github.com/OXeu/certcenter/internal/store"
 )
 

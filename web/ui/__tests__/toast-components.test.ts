@@ -63,7 +63,9 @@ it('shows API failure toasts above the open modal and keeps values available for
     expect(wrapper.get('dialog .tst-viewport').text()).toContain('certificate policy is disabled')
     expect(wrapper.get('form').text()).not.toContain('certificate policy is disabled')
     expect(document.body.querySelectorAll('.tst-viewport')).toHaveLength(1)
-    expect(document.head.querySelector('style[data-toast]')?.getAttribute('nonce')).toBe('test-nonce')
+    expect(document.head.querySelector('style[data-toast]')?.getAttribute('nonce')).toBe(
+      'test-nonce',
+    )
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(form.open).toBe(false)

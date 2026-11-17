@@ -1,34 +1,23 @@
-.PHONY: all build assets lint test check run fmt
+PROJECT := certcenter
+SDK_DIR :=
+COMMON_DIR ?= ../center-common
+.DEFAULT_GOAL := all
+.NOTPARALLEL:
+.PHONY: common common-local bootstrap all build assets lint test check sdk-lint sdk-test run fmt scf-package
 
-BIN ?= .tmp/bin/certcenter
-TMP_ROOT := $(CURDIR)/.tmp
-GO_TEST := mkdir -p $(TMP_ROOT) && TMPDIR=$(TMP_ROOT) go test
+common:
+	node tools/common.ts
 
-all: check build
+common-local:
+	node tools/common.ts --local "$(COMMON_DIR)"
 
-build: assets
-	mkdir -p $(TMP_ROOT)/bin
-	TMPDIR=$(TMP_ROOT) go build -o $(BIN) ./cmd/certcenter
+bootstrap: common
+	cd .tmp/common && npm ci
+	npm ci
 
-assets:
-	npm run --silent build
+all build assets lint test check sdk-lint sdk-test run fmt: common
+	$(MAKE) --no-print-directory -f .tmp/common/config/project.mk PROJECT=$(PROJECT) SDK_DIR=$(SDK_DIR) $@
 
-fmt: assets
-	golangci-lint fmt ./...
-	npm run fmt
-
-lint: assets
-	TMPDIR=$(TMP_ROOT) golangci-lint run ./...
-	npm run lint
-	npm run typecheck
-	npm test --silent
-
-test: assets
-	$(GO_TEST) ./...
-
-check: assets lint test
-
-# The binary loads ConfigCenter connection bootstrap from .env.local;
-# operational settings are read from ConfigCenter through the internal configuration client.
-run: build
-	exec ./$(BIN)
+scf-package:
+	node tools/common.ts --locked
+	$(MAKE) --no-print-directory -f .tmp/common/config/project.mk PROJECT=$(PROJECT) SDK_DIR=$(SDK_DIR) $@

@@ -3,6 +3,7 @@ module github.com/OXeu/certcenter
 go 1.26.10
 
 require (
+	github.com/OXeu/center-common v0.0.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-sql-driver/mysql v1.8.1
@@ -82,3 +83,5 @@ require (
 	go.etcd.io/bbolt v1.5.0
 	golang.org/x/crypto v0.54.0
 )
+
+replace github.com/OXeu/center-common => ./.tmp/common
