@@ -1,5 +1,5 @@
 {
-  "name": "configcenter-web",
+  "name": "certcenter-web",
   "private": true,
   "type": "module",
   "scripts": {

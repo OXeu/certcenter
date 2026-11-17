@@ -10,7 +10,7 @@ export default defineConfig(({ command }) => ({
   cacheDir: '.tmp/vite',
   server: {
     proxy: {
-      '^/(api|mcp|auth|oauth|language|login|logout|static)': 'http://127.0.0.1:8080',
+      '^/(api|mcp|auth|oauth|language|login|logout|static)': 'http://127.0.0.1:8081',
     },
   },
   build: {

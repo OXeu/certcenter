@@ -1,5 +1,7 @@
 import type { createForm } from './forms.ts'
 export const dangerOperations = {
+  issueCertificate: 'cert.issue',
+  deployCertificate: 'cert.deploy',
   signOut: 'nav.signOut',
   deleteUser: 'common.delete',
   rotateKey: 'projects.rotate',

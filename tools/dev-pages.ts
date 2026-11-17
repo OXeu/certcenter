@@ -6,19 +6,19 @@ async function serve(
 ) {
   if (req.url === '/') {
     res.statusCode = 302
-    res.setHeader('Location', '/projects')
+    res.setHeader('Location', '/domains')
     res.end()
     return
   }
   if (
     req.method !== 'GET' ||
-    !/^\/(?:projects(?:\/[^?]*)?|users|settings|keys|login|docs(?:\/[^?]*)?)(?:\?|$)/u.test(
+    !/^\/(?:domains(?:\/[^?]*)?|projects(?:\/[^?]*)?|users|settings|keys|login|docs(?:\/[^?]*)?)(?:\?|$)/u.test(
       req.url ?? '',
     )
   )
     return next()
   try {
-    const response = await fetch(`http://127.0.0.1:8080${req.url}`, {
+    const response = await fetch(`http://127.0.0.1:8081${req.url}`, {
       redirect: 'manual',
       headers: {
         cookie: req.headers.cookie ?? '',
@@ -56,7 +56,7 @@ async function serve(
 /** @returns {import('vite-plus').Plugin} */
 export function devPages() {
   return {
-    name: 'configcenter-pages',
+    name: 'certcenter-pages',
     configureServer(server: import('vite-plus').ViteDevServer) {
       server.middlewares.use((req, res, next) => {
         void serve(req, res, next)

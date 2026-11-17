@@ -8,7 +8,19 @@ export type User = {
 }
 
 export type PageData = {
-  page: 'login' | 'projects' | 'project' | 'users' | 'settings' | 'keys' | 'docs'
+  page:
+    | 'login'
+    | 'projects'
+    | 'project'
+    | 'users'
+    | 'settings'
+    | 'keys'
+    | 'docs'
+    | 'domains'
+    | 'certificates'
+    | 'certificate-settings'
+  certcenter?: boolean
+  domain?: string
   docPage?: string
   lang: string
   title: string
@@ -29,4 +41,15 @@ export type PageData = {
   flash: { message: string; level: 'error' | 'success' } | null
 }
 
-export const pages = ['login', 'projects', 'project', 'users', 'settings', 'keys', 'docs']
+export const pages = [
+  'login',
+  'projects',
+  'project',
+  'users',
+  'settings',
+  'keys',
+  'docs',
+  'domains',
+  'certificates',
+  'certificate-settings',
+]

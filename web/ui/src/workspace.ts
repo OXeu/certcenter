@@ -298,3 +298,4 @@ export function createWorkspace(
     newEnvironment,
   }
 }
+export { createCertificateWorkspace } from './certificates.ts'

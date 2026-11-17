@@ -31,6 +31,9 @@ const themeLabel = computed(() => msg(props.theme === 'dark' ? 'theme.toLight' :
 const themeIcon = computed(() => (props.theme === 'dark' ? 'ri-moon-line' : 'ri-sun-line'))
 
 const data = /** @type {PageData} */ (props.data)
+const homeURL = computed(() => (data.certcenter ? '/domains' : '/projects'))
+const homeLabel = computed(() => (data.certcenter ? 'cert.domains' : 'nav.projects'))
+const showKeys = computed(() => data.loggedIn && !data.certcenter)
 const msg = /** @type {(id: string, vars?: Record<string, string>) => string} */ (props.msg)
 const avatarFailed = ref(false)
 const avatarSource = computed(() => data.me?.avatar_url ?? '')
@@ -72,14 +75,14 @@ async function logout() {
 <template>
   <a class="sr-only" href="#main">{{ msg('nav.skip') }}</a>
   <header class="flex flex-wrap items-center gap-2 border-b px-4 py-3 sm:gap-4 sm:px-6">
-    <a class="btn-ghost btn-icon mr-auto sm:mr-0" href="/projects" :aria-label="msg('app.name')">
+    <a class="btn-ghost btn-icon mr-auto sm:mr-0" :href="homeURL" :aria-label="msg('app.name')">
       <img :src="brandIcon.src" :srcset="brandIcon.srcset" width="32" height="32" alt="" />
     </a>
     <nav
       class="order-last flex w-full flex-wrap gap-1 sm:order-none sm:w-auto sm:flex-1"
       :aria-label="msg('nav.main')"
     >
-      <a v-if="data.loggedIn" class="btn-ghost" href="/projects">{{ msg('nav.projects') }}</a>
+      <a v-if="data.loggedIn" class="btn-ghost" :href="homeURL">{{ msg(homeLabel) }}</a>
       <a v-if="data.isAdmin" class="btn-ghost" href="/settings">{{ msg('title.settings') }}</a>
       <a class="btn-ghost" href="/docs/">{{ msg('nav.docs') }}</a>
     </nav>
@@ -142,6 +145,7 @@ async function logout() {
           </div>
           <div class="border-t border-gray-200 pt-1">
             <a
+              v-if="showKeys"
               class="btn-ghost w-full justify-start gap-2"
               href="/keys"
               :aria-label="msg('title.keys')"
