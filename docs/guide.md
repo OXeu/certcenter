@@ -29,7 +29,12 @@ Server settings such as the listener, database, OAuth provider and encryption ke
 3. In ConfigCenter, edit `certcenter.server`: set `public_url`, `addr`, database settings, `oauth.issuer_url`, `oauth.client_id`, `oauth.client_secret`, `oauth.redirect_url`, and `bootstrap.admin_email` for the intended verified identity. Keep the generated `encryption_key`. The full shapes are defined in [server configuration](../internal/config/config.go) and [OAuth configuration](../internal/auth/auth.go).
 4. Register the public URL plus `/oauth/callback` at the identity provider. For the first production run, point `database_dsn` at a new, empty application database before restarting: the first initialization above used the default administrator identity, and changing bootstrap settings does not rewrite existing users. The empty production database will initialize the administrator specified in the prepared configuration.
 
-For AuthCenter, set `oauth.scopes` in `certcenter.server` to `["profile", "email"]` and grant both scopes to the registered application. AuthCenter implements plain OAuth 2.0 and does not support `openid` or `groups`. The shared client omits `openid` and `nonce` when discovery explicitly lists scopes without `openid`, preserves PKCE, and reads identity from the userinfo endpoint when no ID Token is issued.
+Choose AuthCenter's `oauth.scopes` in `certcenter.server` according to its signing configuration:
+
+- With `AC_OIDC_SIGNING_KEYS` configured in AuthCenter, use `["openid", "profile", "email"]` to receive signed ID Tokens verified through its published JWKS.
+- Without signing keys, use `["profile", "email"]`; the shared client omits unsupported `openid` and `nonce`, preserves PKCE, and reads identity from userinfo when no ID Token is issued.
+
+AuthCenter does not support the `groups` scope.
 5. Configure the ACME account, DNS providers, domains, certificate policies and upstream deployment targets. Provider settings are stored under `certcenter.providers`; domain configuration and jobs are managed by the application.
 
 ## Production and shared builds

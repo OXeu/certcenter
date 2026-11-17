@@ -29,7 +29,12 @@
 3. 在 ConfigCenter 编辑 `certcenter.server`：设置 `public_url`、`addr`、数据库参数、`oauth.issuer_url`、`oauth.client_id`、`oauth.client_secret`、`oauth.redirect_url`，以及目标管理员已验证邮箱对应的 `bootstrap.admin_email`；保留生成的 `encryption_key`。字段结构见[服务器配置](../internal/config/config.go)和 [OAuth 配置](../internal/auth/auth.go)。
 4. 在身份提供商登记公网地址加 `/oauth/callback`。首次生产启动前，将 `database_dsn` 指向新的空应用数据库再重启：前面的初始化使用了默认管理员身份，修改引导参数不会重写已有用户；新的空生产数据库会按照已准备好的配置创建目标管理员。
 
-接入 AuthCenter 时，将 `certcenter.server` 的 `oauth.scopes` 设为 `["profile", "email"]`，并为注册的应用授予这两个 scope。AuthCenter 使用普通 OAuth 2.0，不支持 `openid` 或 `groups`。发现元数据明确列出的 scope 不含 `openid` 时，共享客户端会省略 `openid` 和 `nonce`，保留 PKCE，并在未签发 ID Token 时通过用户信息接口读取身份。
+接入 AuthCenter 时，按其签名配置设置 `certcenter.server` 的 `oauth.scopes`：
+
+- 已配置 `AC_OIDC_SIGNING_KEYS` 时，使用 `["openid", "profile", "email"]`，通过公开的 JWKS 验证签名 ID Token。
+- 未配置签名密钥时，使用 `["profile", "email"]`；共享客户端会省略不受支持的 `openid` 和 `nonce`，保留 PKCE，并在未签发 ID Token 时通过用户信息接口读取身份。
+
+AuthCenter 不支持 `groups` scope。
 5. 配置 ACME 账号、DNS 提供商、域名、证书策略及上游部署目标。提供商参数保存在 `certcenter.providers`，域名和任务由应用管理。
 
 ## 生产环境
