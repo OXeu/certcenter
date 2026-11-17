@@ -63,18 +63,16 @@ func TestRemoteStartupInitializesAllMissingDefaults(t *testing.T) {
 				items = append(items, configcenter.Item{Key: key, Value: value})
 			}
 			json.NewEncoder(w).Encode(map[string]any{"items": items})
-		case "/api/v1/projects/certcenter/environments/production/defaults":
-			if r.Method != http.MethodPost {
+		case "/api/v1/projects/certcenter/environments/production/items":
+			if r.Method != http.MethodPut {
 				t.Error("unexpected method")
 			}
 			var in struct {
-				Defaults map[string]string `json:"defaults"`
+				Items []configcenter.Item `json:"items"`
 			}
 			json.NewDecoder(r.Body).Decode(&in)
-			for key, value := range in.Defaults {
-				if _, ok := values[key]; !ok {
-					values[key] = value
-				}
+			for _, item := range in.Items {
+				values[item.Key] = item.Value
 			}
 			writes++
 			w.WriteHeader(http.StatusNoContent)

@@ -1,11 +1,8 @@
 package configcenter
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -13,8 +10,9 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// EnsureDefaults atomically creates missing keys in the selected backend and reloads the snapshot.
-// Remote initialization requires a server with the defaults endpoint and config:write permission.
+// EnsureDefaults creates missing keys in the selected backend and reloads the snapshot.
+// Remote initialization uses batch reads and writes; run bootstrap from one instance.
+// It requires config:read, config:write, projects:read and environments:read permissions.
 func (c *Client) EnsureDefaults(ctx context.Context, defaults map[string]string) error {
 	keys := make([]string, 0, len(defaults))
 	for key := range defaults {
@@ -57,42 +55,20 @@ func (c *Client) ensureDefaults(ctx context.Context, defaults map[string]string)
 		c.replace(items, "")
 		return nil
 	}
-	if err := c.Load(ctx); err != nil {
+	existing, err := c.readMany(ctx, batchKeys(defaults))
+	if err != nil {
 		return err
 	}
-	missing := false
-	for key := range defaults {
-		if _, ok := c.Get(key); !ok {
-			missing = true
-			break
+	missing := make(map[string]string)
+	for key, value := range defaults {
+		if _, ok := existing[key]; !ok {
+			missing[key] = value
 		}
 	}
-	if !missing {
-		return nil
-	}
-	path, err := c.environmentPath(ctx)
-	if err != nil {
-		return err
-	}
-	body, err := json.Marshal(map[string]any{"defaults": defaults})
-	if err != nil {
-		return fmt.Errorf("encode defaults: %w", err)
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, path+"/defaults", bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("build defaults request: %w", err)
-	}
-	req.Header.Set("Authorization", "ApiKey "+c.apiKey)
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("send defaults request: %w", err)
-	}
-	if err := resp.Body.Close(); err != nil {
-		return fmt.Errorf("close defaults response: %w", err)
-	}
-	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("configcenter defaults endpoint: status %d (requires config:write and a server supporting initialization)", resp.StatusCode)
+	if len(missing) > 0 {
+		if err := c.putMany(ctx, missing); err != nil {
+			return err
+		}
 	}
 	return c.Load(ctx)
 }

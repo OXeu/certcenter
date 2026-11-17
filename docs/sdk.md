@@ -8,7 +8,9 @@ CertCenter 使用 `github.com/OXeu/configcenter/sdk/configcenter`。仓库保留
 
 每次启动通过 `EnsureDefaults` 检查配置，自动创建缺失的 `certcenter.server`、`certcenter.providers` 两个配置项。服务、数据库、OAuth、用户组和 ACME 等固定设置的默认值保存在这两个 JSON 中；DNS 和部署账号列表默认为空，不生成示例账号。既有配置项（包括空值或错误值）保持原样，避免替换管理员配置和加密密钥。
 
-远端使用 `POST /api/v1/projects/:project/environments/:env/defaults`，通过数据库事务和唯一键只插入不存在的项；本地通过 bbolt 事务完成同样的操作。多个实例同时初始化也不会覆盖彼此已写入的值。需要先更新并重启 ConfigCenter 服务端以提供此接口；缺少接口或写权限时会报出相关 key 和 HTTP 状态。
+远端通过批量读取接口检查键，再用 `PUT /api/v1/projects/:project/environments/:env/items` 和 `config:write` 批量补齐缺失项，不再提供独立初始化 API。首次初始化应由一个实例完成，批量读写之间不提供跨请求并发保护。本地仍通过 bbolt 事务原子初始化，已有值不会覆盖。缺少权限或批量接口时会报出相关 key 和 HTTP 状态。
+
+SDK 提供 `ReadMany(ctx, keys)` 和 `PutMany(ctx, values)`，分别使用一次请求读写多个配置。`ReadMany` 返回键值映射，省略缺失键，不替换已加载快照；`PutMany` 使用一个事务创建或更新整批值并更新快照。每批 1–500 个键，远端写入请求体最多 1 MiB。原有 `Put` 和单项读取保持兼容。
 
 例如缺失项读取错误会显示 `key "certcenter.server": configuration not found`；无效配置会显示 `validate key "certcenter.server": ...`，不输出配置值或凭据。初始化完成后仍需填写实际 OAuth、DNS 和部署凭据；默认不接受 ACME 条款，不自动执行云端操作。
 

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestEnsureDefaultsRemoteUsesAtomicInitialization(t *testing.T) {
+func TestEnsureDefaultsRemoteUsesBatchReadAndWrite(t *testing.T) {
 	values := map[string]string{"keep": "operator-value"}
 	var mu sync.Mutex
 	writes := 0
@@ -25,19 +25,17 @@ func TestEnsureDefaultsRemoteUsesAtomicInitialization(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]any{"items": items})
 		case "/api/v1/agent/project":
 			json.NewEncoder(w).Encode(map[string]any{"project": map[string]string{"slug": "app"}})
-		case "/api/v1/projects/app/environments/production/defaults":
-			if r.Method != http.MethodPost || r.Header.Get("Authorization") != "ApiKey cc_test" {
+		case "/api/v1/projects/app/environments/production/items":
+			if r.Method != http.MethodPut || r.Header.Get("Authorization") != "ApiKey cc_test" {
 				t.Error("invalid initializer request")
 			}
 			var in struct {
-				Defaults map[string]string `json:"defaults"`
+				Items []Item `json:"items"`
 			}
 			json.NewDecoder(r.Body).Decode(&in)
-			for key, value := range in.Defaults {
-				if _, ok := values[key]; !ok {
-					values[key] = value
-					writes++
-				}
+			for _, item := range in.Items {
+				values[item.Key] = item.Value
+				writes++
 			}
 			w.WriteHeader(http.StatusNoContent)
 		default:
