@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { FormValidationError } from './errors.ts'
 
 export type ScopeDraft = { id: number; project: string; permissions: string[] }
 export type Choice = { value: string; label: string }
@@ -19,6 +20,7 @@ export function createForm(page: import('./page.ts').PageContext) {
     nextScopeId: 0,
     fields: /** @type {any[]} */ ([]) as any[],
     values: /** @type {Record<string, string>} */ ({}) as Record<string, string>,
+    selections: {} as Record<string, string[]>,
     action: /** @type {() => Promise<void>} */ (async () => {}) as () => Promise<void>,
     /** @param {string} title @param {any[]} fields @param {Record<string,string>} values @param {() => Promise<void>} action */
     show(
@@ -31,6 +33,9 @@ export function createForm(page: import('./page.ts').PageContext) {
       this.title = title
       this.fields = fields
       this.values = { ...values }
+      this.selections = Object.fromEntries(
+        fields.filter((field) => field.choices).map((field) => [field.key, []]),
+      )
       this.action = action
       this.error = ''
       this.token = ''
@@ -63,6 +68,16 @@ export function createForm(page: import('./page.ts').PageContext) {
       this.busy = true
       this.error = ''
       try {
+        for (const field of this.fields) {
+          if (
+            field.required &&
+            field.options &&
+            !field.options.some((option: Choice) => option.value === this.values[field.key])
+          )
+            throw new FormValidationError(
+              page.msg('form.selectRequired', { Label: page.msg(field.label) }),
+            )
+        }
         await this.action()
         if (!this.token) this.open = false
       } catch (err) {

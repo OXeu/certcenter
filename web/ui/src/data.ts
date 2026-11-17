@@ -19,6 +19,8 @@ export type PageData = {
     | 'domains'
     | 'certificates'
     | 'certificate-settings'
+    | 'dns-providers'
+    | 'upstreams'
   certcenter?: boolean
   domain?: string
   docPage?: string
@@ -52,4 +54,6 @@ export const pages = [
   'domains',
   'certificates',
   'certificate-settings',
+  'dns-providers',
+  'upstreams',
 ]

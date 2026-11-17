@@ -117,6 +117,10 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
     const original = detail.domain.certificates ?? []
     const version = detail.version
     const options = detail.dns_providers.map((value) => ({ value, label: value }))
+    if (!options.length) {
+      notify('info', page.msg('cert.noDNSProviders'))
+      return
+    }
     form.show(
       page.msg(policy ? 'common.edit' : 'cert.addCertificate'),
       [
@@ -127,7 +131,11 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
         boolean('auto_renew', 'cert.autoRenew'),
         field('renew_before_days', 'cert.renewBefore'),
         boolean('auto_deploy', 'cert.autoDeploy'),
-        field('upstreams', 'cert.upstreamNames', false),
+        {
+          key: 'upstreams',
+          label: 'cert.upstreams',
+          choices: detail.upstreams.map((value) => ({ value, label: value })),
+        },
       ],
       {
         id: policy?.id ?? '',
@@ -149,7 +157,7 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
           auto_renew: values.auto_renew === 'true',
           renew_before_days: Number(values.renew_before_days),
           auto_deploy: values.auto_deploy === 'true',
-          upstreams: split(values.upstreams),
+          upstreams: [...form.selections.upstreams],
         }
         const certificates = policy
           ? original.map((entry) => (entry.id === policy.id ? updated : entry))
@@ -159,6 +167,7 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
         notify('success', page.msg('toast.saved'))
       },
     )
+    form.selections.upstreams = [...(policy?.upstreams ?? [])]
   }
   function actionsFor(policy: Policy) {
     const makeAction = (action: 'issue' | 'deploy') =>

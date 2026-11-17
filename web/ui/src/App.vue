@@ -7,6 +7,7 @@ import { mountToasts, notify, setToastTheme } from './toast.ts'
 
 const WorkspacePage = defineAsyncComponent(() => import('./WorkspacePage.vue'))
 const CertificatePage = defineAsyncComponent(() => import('./CertificatePage.vue'))
+const ProviderPage = defineAsyncComponent(() => import('./ProviderPage.vue'))
 
 const props = defineProps({ data: { type: Object, required: true } })
 const data = /** @type {import('./data.ts').PageData} */ (props.data)
@@ -16,6 +17,7 @@ const isDocs = computed(() => data.page === 'docs')
 const isCertificatePage = computed(() =>
   ['domains', 'certificates', 'certificate-settings'].includes(data.page),
 )
+const isProviderPage = computed(() => ['dns-providers', 'upstreams'].includes(data.page))
 const isWorkspace = computed(() =>
   ['projects', 'project', 'users', 'settings', 'keys'].includes(data.page),
 )
@@ -57,6 +59,7 @@ onMounted(() => {
       }}</a>
       <WorkspacePage v-if="isWorkspace" :data="data" :page="page" :title="title" />
       <CertificatePage v-if="isCertificatePage" :data="data" :page="page" />
+      <ProviderPage v-if="isProviderPage" :data="data" :page="page" />
     </PageHeader>
     <nav
       v-if="isDocs"

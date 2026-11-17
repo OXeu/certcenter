@@ -12,7 +12,7 @@ async function serve(
   }
   if (
     req.method !== 'GET' ||
-    !/^\/(?:domains(?:\/[^?]*)?|projects(?:\/[^?]*)?|users|settings|keys|login|docs(?:\/[^?]*)?)(?:\?|$)/u.test(
+    !/^\/(?:domains(?:\/[^?]*)?|projects(?:\/[^?]*)?|dns-providers|upstreams|users|settings|keys|login|docs(?:\/[^?]*)?)(?:\?|$)/u.test(
       req.url ?? '',
     )
   )

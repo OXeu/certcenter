@@ -1,5 +1,7 @@
 import type { createForm } from './forms.ts'
 export const dangerOperations = {
+  deleteDNSProvider: 'common.delete',
+  deleteUpstream: 'common.delete',
   issueCertificate: 'cert.issue',
   deployCertificate: 'cert.deploy',
   signOut: 'nav.signOut',

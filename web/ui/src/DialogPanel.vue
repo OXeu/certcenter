@@ -7,6 +7,11 @@ const props = defineProps({
   form: { type: Object, required: true },
   msg: { type: Function, required: true },
 })
+const visibleFields = computed(() =>
+  props.form.fields.filter(
+    (/** @type {any} */ field) => !field.kinds || field.kinds.includes(props.form.values.kind),
+  ),
+)
 const canAddScope = computed(() =>
   props.form.scopeProjects.some(
     (/** @type {import('./forms.ts').Choice} */ option) =>
@@ -39,8 +44,10 @@ function cancel(event) {
     <form class="space-y-3" @submit.prevent="form.submit">
       <h2 class="text-base font-semibold">{{ form.title }}</h2>
       <template v-if="!form.token">
-        <div v-for="field in form.fields" :key="field.key" class="field">
-          <label :for="`${formId}-${field.key}`">{{ msg(field.label) }}</label>
+        <div v-for="field in visibleFields" :key="field.key" class="field">
+          <label v-if="!field.choices" :for="`${formId}-${field.key}`">{{
+            msg(field.label)
+          }}</label>
           <DropdownSelect
             v-if="field.options"
             :id="`${formId}-${field.key}`"
@@ -48,8 +55,24 @@ function cancel(event) {
             :label="msg(field.label)"
             :options="field.options"
             :required="field.required"
-            :disabled="form.busy"
+            :disabled="form.busy || field.readonly"
           />
+          <div
+            v-else-if="field.choices"
+            class="space-y-1"
+            role="group"
+            :aria-label="msg(field.label)"
+          >
+            <p>{{ msg(field.label) }}</p>
+            <CheckboxField
+              v-for="choice in field.choices"
+              :key="choice.value"
+              v-model="form.selections[field.key]"
+              :label="choice.label"
+              :value="choice.value"
+              :disabled="form.busy"
+            />
+          </div>
           <textarea
             v-else-if="field.multiline"
             :id="`${formId}-${field.key}`"
@@ -59,6 +82,16 @@ function cancel(event) {
             :disabled="form.busy"
           ></textarea>
           <input
+            v-else-if="field.secret"
+            :id="`${formId}-${field.key}`"
+            v-model="form.values[field.key]"
+            type="password"
+            autocomplete="new-password"
+            class="input"
+            :required="field.required"
+            :disabled="form.busy"
+          />
+          <input
             v-else
             :id="`${formId}-${field.key}`"
             v-model="form.values[field.key]"
@@ -66,6 +99,7 @@ function cancel(event) {
             :required="field.required"
             :disabled="form.busy"
           />
+          <p v-if="field.help" class="field">{{ msg(field.help) }}</p>
         </div>
         <section v-if="form.scopes !== null" class="space-y-3">
           <h3 class="text-sm font-medium">{{ msg('keys.scopes') }}</h3>

@@ -9,6 +9,8 @@ const statusMessages: Record<string, string> = {
   502: 'error.502',
 }
 
+export class FormValidationError extends Error {}
+
 /**
  * @param {unknown} err
  * @returns {string}
@@ -34,6 +36,7 @@ function codeOf(err: unknown): number {
  * @returns {string}
  */
 export function describeError(msg: (id: string) => string, err: unknown): string {
+  if (err instanceof FormValidationError) return err.message
   const code = codeOf(err)
   const key = code === 0 ? 'error.network' : statusMessages[code]
   if (key === undefined) return messageOf(err)

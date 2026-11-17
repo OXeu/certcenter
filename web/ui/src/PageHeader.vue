@@ -33,6 +33,7 @@ const data = /** @type {PageData} */ (props.data)
 const homeURL = computed(() => (data.certcenter ? '/domains' : '/projects'))
 const homeLabel = computed(() => (data.certcenter ? 'cert.domains' : 'nav.projects'))
 const showKeys = computed(() => data.loggedIn && !data.certcenter)
+const manageProviders = computed(() => data.isAdmin && data.certcenter)
 const msg = /** @type {(id: string, vars?: Record<string, string>) => string} */ (props.msg)
 const avatarFailed = ref(false)
 const avatarSource = computed(() => data.me?.avatar_url ?? '')
@@ -82,6 +83,10 @@ async function logout() {
       :aria-label="msg('nav.main')"
     >
       <a v-if="data.loggedIn" class="btn-ghost" :href="homeURL">{{ msg(homeLabel) }}</a>
+      <a v-if="manageProviders" class="btn-ghost" href="/dns-providers">{{
+        msg('cert.dnsProviders')
+      }}</a>
+      <a v-if="manageProviders" class="btn-ghost" href="/upstreams">{{ msg('cert.upstreams') }}</a>
       <a v-if="data.isAdmin" class="btn-ghost" href="/settings">{{ msg('title.settings') }}</a>
       <a class="btn-ghost" href="/docs/">{{ msg('nav.docs') }}</a>
     </nav>

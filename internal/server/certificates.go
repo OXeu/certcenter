@@ -30,6 +30,7 @@ func (s *Server) mountCertificates(r *gin.Engine) {
 	ui.GET("/users", auth.RequireAdmin(), s.usersPage)
 	r.GET("/projects", func(c *gin.Context) { c.Redirect(http.StatusFound, "/domains") })
 	api := r.Group("/api/v1", auth.RequireUser())
+	s.mountProviders(ui, api)
 	api.GET("/domains", s.certificateDomains)
 	api.POST("/domains", auth.RequireAdmin(), s.createCertificateDomain)
 	api.GET("/domains/:domain", s.certificateDomain)

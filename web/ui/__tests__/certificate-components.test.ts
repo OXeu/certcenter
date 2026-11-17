@@ -1,5 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { flushPromises, mount } from '@vue/test-utils'
+import { notify } from '../src/toast.ts'
 import CertificatePage from '../src/CertificatePage.vue'
 import { createCertificateWorkspace } from '../src/workspace.ts'
 import { createPage } from '../src/page.ts'
@@ -54,8 +55,8 @@ const detail = {
   ],
   jobs: [],
   events: [],
-  dns_providers: ['dns'],
-  upstreams: ['cloud'],
+  dns_providers: ['dns', 'second-dns'],
+  upstreams: ['cloud', 'ssh'],
   delegations: [],
 }
 const fetchMock = vi.fn()
@@ -128,6 +129,32 @@ describe('certificate management', () => {
     await flushPromises()
     expect(wrapper.find('dialog').element.open).toBe(true)
     expect(wrapper.findAll('dialog input, dialog textarea').length).toBeGreaterThan(0)
+    const dns = wrapper.get('[role="combobox"][aria-label="DNS provider"]')
+    await dns.trigger('click')
+    await wrapper
+      .findAll('[role="option"]')
+      .find((option) => option.text() === 'second-dns')!
+      .trigger('click')
+    await wrapper.get('[role="checkbox"][aria-label="ssh"]').trigger('click')
+    await wrapper.get('dialog form').trigger('submit')
+    await flushPromises()
+    const write = fetchMock.mock.calls.find((call) => call[1].method === 'PUT')!
+    expect(JSON.parse(write[1].body).certificates[0]).toMatchObject({
+      dns_provider: 'second-dns',
+      upstreams: ['cloud', 'ssh'],
+    })
     wrapper.unmount()
+  })
+  it('explains how to configure DNS when no account exists', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ...detail, dns_providers: [] }),
+    })
+    const workspace = createCertificateWorkspace(data, createPage(data))
+    await workspace.refresh()
+    workspace.editPolicy()
+    expect(workspace.form.open).toBe(false)
+    expect(notify).toHaveBeenCalledWith('info', expect.stringContaining('DNS providers page'))
   })
 })
