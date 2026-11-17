@@ -122,7 +122,7 @@ func certificateFlows(t *testing.T) (*flows, *Server) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := newServer(t.Context(), config.Config{DatabaseDSN: "file:" + t.Name() + "?mode=memory&cache=shared", Languages: []string{"en", "zh-CN"}, SessionTTL: time.Hour, Bootstrap: config.Bootstrap{AdminEmail: "admin@example.com", AdminName: "admin"}}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	s, err := newServer(t.Context(), config.Config{PublicURL: "http://cc.test", DatabaseDSN: "file:" + t.Name() + "?mode=memory&cache=shared", Languages: []string{"en", "zh-CN"}, SessionTTL: time.Hour, Bootstrap: config.Bootstrap{AdminEmail: "admin@example.com", AdminName: "admin"}}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -209,7 +209,7 @@ func (s *Server) render(c *gin.Context, status int, data gin.H) {
 		"messages": s.catalog.Messages(s.translator(c).Lang()), "flash": nil,
 		"certcenter": s.cfg.Remote != nil, "domain": withCommon["Domain"],
 	}
-	for _, key := range []string{"Page", "Env", "CanWrite", "DocPage"} {
+	for _, key := range []string{"Page", "Env", "CanWrite", "DocPage", "Consent"} {
 		if value, ok := withCommon[key]; ok {
 			payload[strings.ToLower(key[:1])+key[1:]] = value
 		}
@@ -294,6 +294,7 @@ func (s *Server) router() *gin.Engine {
 	if s.cfg.Remote != nil {
 		r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/domains") })
 		s.mountCertificates(r)
+		s.MountMCP(r)
 		return r
 	}
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/projects") })

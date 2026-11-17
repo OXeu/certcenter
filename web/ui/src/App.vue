@@ -6,6 +6,7 @@ import { createPage } from './page.ts'
 import { useTheme } from './theme.ts'
 import { mountToasts, notify, setToastTheme } from './toast.ts'
 
+const MCPConsentPage = defineAsyncComponent(() => import('./MCPConsentPage.vue'))
 const WorkspacePage = defineAsyncComponent(() => import('./WorkspacePage.vue'))
 const CertificatePage = defineAsyncComponent(() => import('./CertificatePage.vue'))
 const CertificateSettingsPage = defineAsyncComponent(() => import('./CertificateSettingsPage.vue'))
@@ -61,6 +62,7 @@ onMounted(() => {
       <a v-if="data.page === 'login' && data.oauthEnabled" class="btn mt-4" href="/auth/login">{{
         msg('login.continue', { ProviderName: data.providerName })
       }}</a>
+      <MCPConsentPage v-if="data.page === 'mcp-consent'" :data="data" :page="page" />
       <WorkspacePage v-if="isWorkspace" :data="data" :page="page" :title="title" />
       <CertificatePage v-if="isCertificatePage" :data="data" :page="page" />
       <CertificateSettingsPage v-if="isSettingsPage" :page="page" />

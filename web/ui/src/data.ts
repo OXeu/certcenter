@@ -9,6 +9,7 @@ export type User = {
 
 export type PageData = {
   page:
+    | 'mcp-consent'
     | 'login'
     | 'projects'
     | 'project'
@@ -21,6 +22,7 @@ export type PageData = {
     | 'certificate-settings'
     | 'dns-providers'
     | 'upstreams'
+  consent?: { request: string; client: string; redirectUri: string; resource: string }
   certcenter?: boolean
   domain?: string
   docPage?: string
@@ -44,6 +46,7 @@ export type PageData = {
 }
 
 export const pages = [
+  'mcp-consent',
   'login',
   'projects',
   'project',

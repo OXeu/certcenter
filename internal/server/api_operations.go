@@ -121,7 +121,7 @@ func (op apiOperation) allowed(id auth.Identity) bool {
 		return op.certificateAllowed(id)
 	}
 	if id.APIKey == nil {
-		if id.User == nil || op.Agent {
+		if id.User == nil {
 			return false
 		}
 		for _, permission := range op.Permissions {

@@ -106,6 +106,14 @@ func (s *Server) oauthCallback(c *gin.Context) {
 		s.redirectWithError(c, "session_failed")
 		return
 	}
+	if raw, err := c.Cookie("cc_oauth_return"); err == nil {
+		clearCookie(c, "cc_oauth_return", "/oauth/callback")
+		request, returnErr := s.store.ConsumeOAuthLogin(c.Request.Context(), raw)
+		if returnErr == nil {
+			c.Redirect(http.StatusFound, authorizationURL(request))
+			return
+		}
+	}
 	c.Redirect(http.StatusFound, "/projects")
 }
 

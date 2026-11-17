@@ -77,8 +77,8 @@ func TestProviderAdministrationPermissionsAndRedaction(t *testing.T) {
 		f.csrf = "csrf"
 	}
 	status, _ := f.do(http.MethodPost, "/mcp", map[string]any{"jsonrpc": "2.0", "id": 1, "method": "initialize"})
-	if status != http.StatusNotFound {
-		t.Fatal("CertCenter unexpectedly exposes MCP", status)
+	if status != http.StatusUnauthorized {
+		t.Fatal("MCP must require OAuth", status)
 	}
 }
 

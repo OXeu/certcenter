@@ -33,6 +33,11 @@ func (s *Store) DeleteUser(ctx context.Context, id, successor uint) error {
 		if err := tx.db.Where("user_id = ?", id).Delete(&Session{}).Error; err != nil {
 			return fmt.Errorf("delete user sessions: %w", err)
 		}
+		for _, model := range []any{&OAuthAuthorization{}, &OAuthToken{}} {
+			if err := tx.db.Where("user_id = ?", id).Delete(model).Error; err != nil {
+				return fmt.Errorf("delete user oauth grants: %w", err)
+			}
+		}
 		if err := tx.db.Where("created_by = ?", id).Delete(&APIKey{}).Error; err != nil {
 			return fmt.Errorf("delete user keys: %w", err)
 		}

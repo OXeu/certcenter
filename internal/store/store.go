@@ -39,6 +39,7 @@ func Open(ctx context.Context, dialector gorm.Dialector, adminEmail, adminName s
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 	if err := db.WithContext(ctx).AutoMigrate(
+		&OAuthClient{}, &OAuthAuthorization{}, &OAuthToken{},
 		&User{}, &Session{}, &Project{}, &Environment{}, &ConfigItem{}, &APIKey{}, &MCPProposal{},
 		&DNSDelegation{}, &DNSChallenge{}, &Certificate{}, &ACMEAccount{}, &CertificateJob{}, &CertificateEvent{}, &Deployment{}, &CloudUpdate{},
 	); err != nil {

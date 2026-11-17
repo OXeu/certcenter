@@ -15,7 +15,7 @@ import (
 
 const (
 	jsonRPCVersion     = "2.0"
-	mcpProtocol        = "2025-06-18"
+	mcpProtocol        = "2025-11-25"
 	codeParseError     = -32700
 	codeInvalidRequest = -32600
 	codeMethodNotFound = -32601
@@ -44,13 +44,10 @@ type rpcError struct {
 
 // MountMCP serves all API operations over a single stateless MCP endpoint.
 func (s *Server) MountMCP(r *gin.Engine) {
-	s.mcpAPI = gin.New()
-	s.mcpAPI.UseRawPath = true
-	s.mcpAPI.UnescapePathValues = true
-	s.mcpAPI.Use(s.authenticator.BrowserMiddleware())
-	s.MountAPI(s.mcpAPI)
-	r.POST("/mcp", s.mcpOrigin, s.authenticator.ManagementMiddleware(), s.mcpHandle)
-	r.Match([]string{http.MethodGet, http.MethodDelete}, "/mcp", s.mcpOrigin, func(c *gin.Context) {
+	s.mountMCPAPI()
+	s.mountMCPOAuth(r)
+	r.POST("/mcp", s.mcpOrigin, s.mcpAuthenticate, s.mcpHandle)
+	r.Match([]string{http.MethodGet, http.MethodDelete}, "/mcp", s.mcpOrigin, s.mcpAuthenticate, func(c *gin.Context) {
 		c.Header("Allow", http.MethodPost)
 		c.Status(http.StatusMethodNotAllowed)
 	})
@@ -68,7 +65,7 @@ func (s *Server) mcpOrigin(c *gin.Context) {
 }
 
 func (s *Server) mcpHandle(c *gin.Context) {
-	if version := c.GetHeader("MCP-Protocol-Version"); version != "" && version != mcpProtocol {
+	if version := c.GetHeader("MCP-Protocol-Version"); version != "" && !supportedMCPVersion(version) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported MCP protocol version"})
 		return
 	}
@@ -116,10 +113,20 @@ func validRPCID(raw json.RawMessage) bool {
 func (s *Server) dispatch(c *gin.Context, req rpcRequest) (any, *rpcError) {
 	switch req.Method {
 	case "initialize":
+		var params struct {
+			ProtocolVersion string `json:"protocolVersion"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return nil, &rpcError{Code: codeInvalidParams, Message: "invalid initialize params"}
+		}
+		version := mcpProtocol
+		if supportedMCPVersion(params.ProtocolVersion) {
+			version = params.ProtocolVersion
+		}
 		return gin.H{
-			"protocolVersion": mcpProtocol,
+			"protocolVersion": version,
 			"capabilities":    gin.H{"tools": gin.H{"listChanged": false}},
-			"serverInfo":      gin.H{"name": "configcenter", "version": "1.0.0"},
+			"serverInfo":      gin.H{"name": "certcenter", "version": "1.0.0"},
 		}, nil
 	case "ping":
 		return gin.H{}, nil
@@ -229,7 +236,6 @@ func (s *Server) executeTool(c *gin.Context, op apiOperation, args map[string]an
 	if err != nil {
 		return nil, &rpcError{Code: codeInvalidParams, Message: "invalid path arguments"}
 	}
-	request.Header = c.Request.Header.Clone()
 	request.Header.Set("Content-Type", "application/json")
 	response := &apiResponse{header: make(http.Header), status: http.StatusOK}
 	s.mcpAPI.ServeHTTP(response, request)
@@ -279,4 +285,8 @@ func (r *apiResponse) WriteHeader(status int) { r.status = status }
 func (r *apiResponse) Write(body []byte) (int, error) {
 	r.body = append(r.body, body...)
 	return len(body), nil
+}
+
+func supportedMCPVersion(version string) bool {
+	return version == mcpProtocol || version == "2025-06-18" || version == "2025-03-26"
 }

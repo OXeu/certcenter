@@ -151,7 +151,12 @@ func RequireAdmin() gin.HandlerFunc {
 // same routes, so every page and JSON call behind it behaves alike.
 func (a *Authenticator) BrowserMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.GetHeader("Authorization") != "" && (strings.HasPrefix(c.Request.URL.Path, "/api/") || c.Request.URL.Path == "/mcp") {
+		switch c.Request.URL.Path {
+		case "/mcp", "/oauth/register", "/oauth/token", "/oauth/revoke":
+			c.Next()
+			return
+		}
+		if c.GetHeader("Authorization") != "" && strings.HasPrefix(c.Request.URL.Path, "/api/") {
 			c.Next()
 			return
 		}

@@ -142,28 +142,7 @@ func TestScopesBindEachPermissionToItsProject(t *testing.T) {
 	keyRequest(t, f.router, token, http.MethodGet, "/api/v1/projects/alpha/environments", nil, http.StatusForbidden)
 	keyRequest(t, f.router, token, http.MethodGet, "/api/v1/agent/environments/production/values", nil, http.StatusBadRequest)
 	keyRequest(t, f.router, token, http.MethodGet, "/api/v1/agent/environments/production/values?project=alpha", nil, http.StatusOK)
-	for _, tc := range []struct {
-		project string
-		tool    string
-	}{{"alpha", "set_config"}, {"beta", "get_config"}} {
-		rec := keyRequest(t, f.router, token, http.MethodPost, "/mcp", map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}, http.StatusOK)
-		var listed struct {
-			Result struct {
-				Tools []mcpTool `json:"tools"`
-			} `json:"result"`
-		}
-		if err := json.Unmarshal(rec.Body.Bytes(), &listed); err != nil || len(listed.Result.Tools) != 6 {
-			t.Fatal("MCP discovery did not filter scopes")
-		}
-		args := map[string]any{"project": tc.project, "environment": "production", "key": "value"}
-		if tc.tool == "set_config" {
-			args["value"] = "30"
-		}
-		rec = keyRequest(t, f.router, token, http.MethodPost, "/mcp", map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": tc.tool, "arguments": args}}, http.StatusOK)
-		if !strings.Contains(rec.Body.String(), `"isError":true`) {
-			t.Fatal("direct MCP call bypassed scopes")
-		}
-	}
+	keyRequest(t, f.router, token, http.MethodPost, "/mcp", nil, http.StatusUnauthorized)
 }
 
 func TestKeyDelegationCannotEscalate(t *testing.T) {

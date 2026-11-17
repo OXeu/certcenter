@@ -302,5 +302,11 @@
   "scope.providers:write": "管理服务商",
   "keys.domainDescription": "统一管理 API Key，为每把密钥配置可访问的域名和操作权限。",
   "keys.domainScopeRequired": "每项权限范围都需要选择域名及至少一项权限。",
-  "keys.duplicateDomain": "同一域名的权限请合并在一项权限范围中。"
+  "keys.duplicateDomain": "同一域名的权限请合并在一项权限范围中。",
+  "mcp.authorize": "授权 MCP",
+  "mcp.request": "{{.Client}} 请求访问你的 CertCenter 账户。",
+  "mcp.permissions": "允许此客户端在你当前账户权限内读取和修改数据，包括执行证书操作。请仅授权你信任的客户端。",
+  "mcp.resource": "服务地址",
+  "mcp.redirect": "客户端回调地址",
+  "mcp.deny": "拒绝"
 }

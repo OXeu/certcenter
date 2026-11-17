@@ -135,6 +135,8 @@ func TestWebAndAgentFlowsAreProjectScoped(t *testing.T) {
 		t.Fatalf("token = %q", token)
 	}
 
+	mcpToken := authorizeMCP(t, f).Access
+	keyRequest(t, f.router, token, http.MethodGet, "/api/v1/projects/configcenter/environments/production/items", nil, http.StatusForbidden)
 	agent := func(project, tool string, args map[string]any) map[string]any {
 		t.Helper()
 		args["project"] = project
@@ -146,7 +148,7 @@ func TestWebAndAgentFlowsAreProjectScoped(t *testing.T) {
 			t.Fatalf("marshal: %v", err)
 		}
 		req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(string(body)))
-		req.Header.Set("Authorization", "ApiKey "+token)
+		req.Header.Set("Authorization", "Bearer "+mcpToken)
 		w := httptest.NewRecorder()
 		f.router.ServeHTTP(w, req)
 		var reply map[string]any

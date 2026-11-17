@@ -8,7 +8,14 @@ import (
 )
 
 func validateToolValue(value any, definition map[string]any, path string) error {
-	switch definition["type"] {
+	kind := definition["type"]
+	if alternatives, ok := kind.([]string); ok {
+		if value == nil && slices.Contains(alternatives, "null") {
+			return nil
+		}
+		kind = alternatives[0]
+	}
+	switch kind {
 	case "object":
 		object, ok := value.(map[string]any)
 		if !ok {
@@ -30,7 +37,13 @@ func validateToolValue(value any, definition map[string]any, path string) error 
 		for name, child := range object {
 			property, ok := properties[name].(map[string]any)
 			if !ok {
-				return fmt.Errorf("%s contains unknown property %s", path, name)
+				if allowed, ok := definition["additionalProperties"].(bool); ok && allowed {
+					continue
+				}
+				property, ok = definition["additionalProperties"].(map[string]any)
+				if !ok {
+					return fmt.Errorf("%s contains unknown property %s", path, name)
+				}
 			}
 			if err := validateToolValue(child, property, path+"."+name); err != nil {
 				return err
@@ -68,9 +81,10 @@ func validateToolValue(value any, definition map[string]any, path string) error 
 		if !ok {
 			return fmt.Errorf("%s must be an integer", path)
 		}
-		integer, err := strconv.ParseUint(string(number), 10, 64)
-		if err != nil || integer == 0 {
-			return fmt.Errorf("%s must be a positive integer", path)
+		integer, err := strconv.ParseInt(string(number), 10, 64)
+		minimum, constrained := definition["minimum"].(int)
+		if err != nil || (constrained && integer < int64(minimum)) {
+			return fmt.Errorf("%s has an invalid integer", path)
 		}
 	case "boolean":
 		if _, ok := value.(bool); !ok {

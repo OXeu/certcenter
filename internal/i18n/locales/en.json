@@ -302,5 +302,11 @@
   "scope.providers:write": "Manage providers",
   "keys.domainDescription": "Manage API keys and choose the domains and operations each key can access.",
   "keys.domainScopeRequired": "Choose a domain and at least one permission for each scope.",
-  "keys.duplicateDomain": "Combine permissions for the same domain in one scope."
+  "keys.duplicateDomain": "Combine permissions for the same domain in one scope.",
+  "mcp.authorize": "Authorize MCP",
+  "mcp.request": "{{.Client}} requests access to your CertCenter account.",
+  "mcp.permissions": "Allow this client to read and change data within your current account permissions, including certificate operations. Only authorize a client you trust.",
+  "mcp.resource": "Service",
+  "mcp.redirect": "Client callback",
+  "mcp.deny": "Deny"
 }
