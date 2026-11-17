@@ -23,7 +23,7 @@ type providerInput struct {
 	Upstream certconfig.Upstream `json:"upstream"`
 }
 
-func (s *Server) mountProviders(ui, api *gin.RouterGroup) {
+func (s *Server) mountProviders(ui *gin.RouterGroup) {
 	for _, route := range []struct {
 		path, title string
 		dns         bool
@@ -34,11 +34,6 @@ func (s *Server) mountProviders(ui, api *gin.RouterGroup) {
 		ui.GET("/"+route.path, auth.RequireAdmin(), func(c *gin.Context) {
 			s.render(c, http.StatusOK, gin.H{"Page": route.path, "Title": route.title})
 		})
-		group := api.Group("/"+route.path, auth.RequireAdmin())
-		group.GET("", func(c *gin.Context) { s.listProviders(c, route.dns) })
-		group.POST("", func(c *gin.Context) { s.saveProvider(c, route.dns) })
-		group.PUT("/:name", func(c *gin.Context) { s.saveProvider(c, route.dns) })
-		group.DELETE("/:name", func(c *gin.Context) { s.saveProvider(c, route.dns) })
 	}
 }
 

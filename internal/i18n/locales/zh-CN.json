@@ -290,5 +290,17 @@
   "settings.languageRequired": "请至少选择一种语言。",
   "settings.invalidMapping": "请每行填写一个不重复的用户组=admin 或 用户组=user 映射。",
   "settings.encryption": "证书加密密钥",
-  "settings.encryptionHelp": "保存设置会保留现有加密密钥；更换密钥需要同时重新加密已有证书材料。"
+  "settings.encryptionHelp": "保存设置会保留现有加密密钥；更换密钥需要同时重新加密已有证书材料。",
+  "keys.allDomains": "全部域名",
+  "keys.scopeDomain": "域名",
+  "keys.domainScopeHelp": "选择域名和操作权限。权限范围为空时，密钥无法访问数据。",
+  "scope.domains:read": "读取域名",
+  "scope.domains:write": "管理域名",
+  "scope.certificates:issue": "签发证书",
+  "scope.certificates:deploy": "部署证书",
+  "scope.providers:read": "读取服务商",
+  "scope.providers:write": "管理服务商",
+  "keys.domainDescription": "统一管理 API Key，为每把密钥配置可访问的域名和操作权限。",
+  "keys.domainScopeRequired": "每项权限范围都需要选择域名及至少一项权限。",
+  "keys.duplicateDomain": "同一域名的权限请合并在一项权限范围中。"
 }

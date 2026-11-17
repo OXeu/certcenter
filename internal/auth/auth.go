@@ -58,6 +58,7 @@ func (c Config) Enabled() bool {
 
 // Identity is the authenticated principal of a request.
 type Identity struct {
+	KeyUser *store.User
 	User    *store.User
 	APIKey  *store.APIKey
 	Project *store.Project

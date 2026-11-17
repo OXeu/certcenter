@@ -20,6 +20,8 @@ type apiOperation struct {
 	Handler        gin.HandlerFunc
 	ProjectHandler func(*gin.Context, store.Project)
 	Arguments      []mcpArgument
+	Certificate    bool
+	Admin          bool
 }
 
 type mcpArgument struct {
@@ -47,6 +49,13 @@ func enumArgument(name string, values ...string) mcpArgument {
 }
 
 func (s *Server) apiOperations() []apiOperation {
+	if s.cfg.Remote != nil {
+		return s.certificateOperations()
+	}
+	return s.configOperations()
+}
+
+func (s *Server) configOperations() []apiOperation {
 	project := argument("project", "path", true)
 	env := argument("environment", "path", true)
 	env.Target = "env"
@@ -108,6 +117,9 @@ func (s *Server) apiOperations() []apiOperation {
 }
 
 func (op apiOperation) allowed(id auth.Identity) bool {
+	if op.Certificate {
+		return op.certificateAllowed(id)
+	}
 	if id.APIKey == nil {
 		if id.User == nil || op.Agent {
 			return false

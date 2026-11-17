@@ -193,3 +193,49 @@ describe('API key scope editor', () => {
     wrapper.unmount()
   })
 })
+
+it('edits certificate domain scopes with domain labels and permission payloads', async () => {
+  fetchMock.mockImplementation(async (url, options) => ({
+    ok: true,
+    status: 200,
+    json: async () =>
+      url === '/api/v1/key-scopes'
+        ? {
+            domains: [{ name: 'example.com' }],
+            permissions: ['domains:read', 'certificates:issue'],
+            all_domains: false,
+          }
+        : options?.method === 'PATCH'
+          ? { key: {} }
+          : {
+              keys: [
+                {
+                  id: 7,
+                  name: 'Issuer',
+                  prefix: 'cc_issuer',
+                  scopes: [{ domain: 'example.com', permissions: ['domains:read'] }],
+                },
+              ],
+            },
+  }))
+  const wrapper = mount(App, { props: { data: { ...data, certcenter: true } } })
+  await settled()
+  expect(wrapper.get('tbody').text()).toContain('example.com: Read domains')
+  expect(wrapper.text()).not.toContain('projects and operations')
+  await wrapper
+    .findAll('button')
+    .find((button) => button.text() === 'Edit')!
+    .trigger('click')
+  await settled()
+  const dialog = wrapper.get('dialog')
+  expect(dialog.get('fieldset').attributes('aria-label')).toBe('Domain')
+  expect(dialog.get('[role="combobox"]').text()).toBe('example.com')
+  await dialog.get('[role="checkbox"][value="certificates:issue"]').trigger('click')
+  await dialog.get('form').trigger('submit')
+  await settled()
+  const request = fetchMock.mock.calls.find((call) => call[1]?.method === 'PATCH')!
+  expect(JSON.parse(request[1].body).scopes).toEqual([
+    { domain: 'example.com', permissions: ['domains:read', 'certificates:issue'] },
+  ])
+  wrapper.unmount()
+})

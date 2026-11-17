@@ -12,7 +12,8 @@ import (
 )
 
 type keyScopeJSON struct {
-	Project     string             `json:"project"`
+	Domain      string             `json:"domain,omitempty"`
+	Project     string             `json:"project,omitempty"`
 	Permissions []store.Permission `json:"permissions"`
 }
 
@@ -24,10 +25,10 @@ func canManageKey(id auth.Identity, key store.APIKey, permission store.Permissio
 		return false
 	}
 	if len(key.Scopes) == 0 {
-		return id.APIKey.Allows(0, permission) || (key.CreatedBy == id.ActorID() && id.APIKey.HasPermission(permission))
+		return id.APIKey.Allows(0, permission) || id.APIKey.AllowsDomain("*", permission) || (key.CreatedBy == id.ActorID() && id.APIKey.HasPermission(permission))
 	}
 	for _, scope := range key.Scopes {
-		if !id.APIKey.Allows(scope.ProjectID, permission) {
+		if (scope.Domain != "" && !id.APIKey.AllowsDomain(scope.Domain, permission)) || (scope.Domain == "" && !id.APIKey.Allows(scope.ProjectID, permission)) {
 			return false
 		}
 	}
@@ -35,6 +36,9 @@ func canManageKey(id auth.Identity, key store.APIKey, permission store.Permissio
 }
 
 func (s *Server) parseKeyScopes(c *gin.Context, input []keyScopeJSON) ([]store.KeyScope, bool) {
+	if s.cfg.Remote != nil {
+		return s.parseDomainKeyScopes(c, input)
+	}
 	if len(input) > 100 {
 		s.fail(c, fmt.Errorf("%w: too many scopes", errBadRequest))
 		return nil, false
@@ -43,13 +47,13 @@ func (s *Server) parseKeyScopes(c *gin.Context, input []keyScopeJSON) ([]store.K
 	scopes := make([]store.KeyScope, 0, len(input))
 	seen := map[string]bool{}
 	for _, scope := range input {
-		if scope.Project == "" || seen[scope.Project] || len(scope.Permissions) == 0 || len(scope.Permissions) > len(store.KeyPermissions()) {
+		if scope.Domain != "" || scope.Project == "" || seen[scope.Project] || len(scope.Permissions) == 0 || len(scope.Permissions) > len(store.KeyPermissions()) {
 			s.fail(c, fmt.Errorf("%w: scopes need a unique project and at least one permission", errBadRequest))
 			return nil, false
 		}
 		seen[scope.Project] = true
 		for index, permission := range scope.Permissions {
-			if !permission.Valid() || slices.Contains(scope.Permissions[:index], permission) || (permission.GlobalOnly() && scope.Project != "*") {
+			if !slices.Contains(store.KeyPermissions(), permission) || slices.Contains(scope.Permissions[:index], permission) || (permission.GlobalOnly() && scope.Project != "*") {
 				s.fail(c, fmt.Errorf("%w: unknown, duplicate or non-global administrative permission", errBadRequest))
 				return nil, false
 			}
@@ -77,6 +81,10 @@ func (s *Server) parseKeyScopes(c *gin.Context, input []keyScopeJSON) ([]store.K
 }
 
 func (s *Server) apiKeyScopes(c *gin.Context) {
+	if s.cfg.Remote != nil {
+		s.domainKeyScopes(c)
+		return
+	}
 	projects, err := s.store.ListProjects(c.Request.Context())
 	if err != nil {
 		s.fail(c, err)

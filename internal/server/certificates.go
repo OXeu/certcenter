@@ -31,19 +31,9 @@ func (s *Server) mountCertificates(r *gin.Engine) {
 	})
 	ui.GET("/users", auth.RequireAdmin(), s.usersPage)
 	r.GET("/projects", func(c *gin.Context) { c.Redirect(http.StatusFound, "/domains") })
-	api := r.Group("/api/v1", auth.RequireUser())
-	s.mountProviders(ui, api)
-	api.GET("/domains", s.certificateDomains)
-	api.POST("/domains", auth.RequireAdmin(), s.createCertificateDomain)
-	api.GET("/domains/:domain", s.certificateDomain)
-	api.PUT("/domains/:domain", s.saveCertificateDomain)
-	api.POST("/domains/:domain/delegations/check", s.checkDomainDelegations)
-	api.POST("/domains/:domain/certificates/:policy/:action", s.queueCertificate)
-	api.GET("/certificate-settings", auth.RequireAdmin(), s.certificateSettings)
-	api.PUT("/certificate-settings/:section", auth.RequireAdmin(), s.saveCertificateSettings)
-	api.GET("/users", auth.RequireAdmin(), s.apiListUsers)
-	api.PATCH("/users/:id", auth.RequireAdmin(), s.apiSetRole)
-	api.DELETE("/users/:id", auth.RequireAdmin(), s.apiDeleteUser)
+	ui.GET("/keys", s.keysPage)
+	s.mountProviders(ui)
+	s.MountAPI(r)
 }
 
 func (s *Server) authorizeDomain(c *gin.Context) (certconfig.Domain, bool) {
@@ -52,7 +42,7 @@ func (s *Server) authorizeDomain(c *gin.Context) (certconfig.Domain, bool) {
 		s.certificateError(c, err)
 		return domain, false
 	}
-	me, ok := s.me(c)
+	me, ok := certificateUser(c)
 	if !ok || (me.Role != store.RoleAdmin && !strings.EqualFold(me.Email, domain.Owner)) {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "domain not found"})
 		return domain, false
@@ -84,10 +74,14 @@ func (s *Server) certificateDomains(c *gin.Context) {
 		s.certificateError(c, err)
 		return
 	}
-	me, _ := s.me(c)
+	me, _ := certificateUser(c)
 	out := []gin.H{}
 	for _, d := range domains {
 		if me.Role != store.RoleAdmin && !strings.EqualFold(me.Email, d.Owner) {
+			continue
+		}
+		id, _ := auth.FromContext(c.Request.Context())
+		if id.APIKey != nil && !id.APIKey.AllowsDomain(d.Name, store.DomainsRead) {
 			continue
 		}
 		out = append(out, gin.H{"name": d.Name, "owner": d.Owner, "count": len(d.Certificates)})

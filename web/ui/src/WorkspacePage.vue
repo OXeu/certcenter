@@ -18,6 +18,9 @@ const canCreate = computed(
   () =>
     data.canWrite && data.page !== 'users' && data.page !== 'settings' && state.tab !== 'proposals',
 )
+const keyDescription = computed(() =>
+  data.certcenter ? 'keys.domainDescription' : 'keys.description',
+)
 const showViewSwitch = computed(() => data.isAdmin && data.page === 'projects')
 const viewLabel = computed(() => msg(state.view === 'all' ? 'projects.mine' : 'projects.all'))
 const reviewing = computed(() => data.page === 'project' && state.tab === 'proposals')
@@ -63,12 +66,14 @@ function cell(row, column) {
     return row[column] ? new Date(row[column]).toLocaleString(data.lang) : ''
   return row[column] ?? ''
 }
-/** @param {{ project: string; permissions: string[] }[]} scopes */
+/** @param {{ project?: string; domain?: string; permissions: string[] }[]} scopes */
 function scopeText(scopes) {
   if (!scopes.length) return msg('keys.noScopes')
   return scopes
     .map((scope) => {
-      const project = scope.project === '*' ? msg('keys.allProjects') : scope.project
+      const target = data.certcenter ? scope.domain : scope.project
+      const all = data.certcenter ? 'keys.allDomains' : 'keys.allProjects'
+      const project = target === '*' ? msg(all) : target
       return `${project}: ${scope.permissions.map((permission) => msg(`scope.${permission}`)).join(', ')}`
     })
     .join('\n')
@@ -77,7 +82,7 @@ onMounted(refresh)
 </script>
 <template>
   <p v-if="data.page === 'keys'" class="mt-2 text-sm text-muted-foreground">
-    {{ msg('keys.description') }}
+    {{ msg(keyDescription) }}
   </p>
   <div class="flex flex-wrap gap-2 my-4">
     <template v-if="data.page === 'project'">

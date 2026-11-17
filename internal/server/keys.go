@@ -48,6 +48,10 @@ func (s *Server) keyViews(c *gin.Context, keys []store.APIKey) ([]keyJSON, bool)
 	for _, key := range keys {
 		scopes := make([]keyScopeJSON, 0, len(key.Scopes))
 		for _, scope := range key.Scopes {
+			if scope.Domain != "" {
+				scopes = append(scopes, keyScopeJSON{Domain: scope.Domain, Permissions: scope.Permissions})
+				continue
+			}
 			project, ok := names[scope.ProjectID]
 			if !ok {
 				project = fmt.Sprintf("#%d", scope.ProjectID)
@@ -76,7 +80,7 @@ func (s *Server) apiListKeys(c *gin.Context) {
 	}
 	allowed := make([]store.APIKey, 0, len(keys))
 	for _, key := range keys {
-		if (projectID == 0 || key.HasProject(projectID)) && canManageKey(id, key, store.KeysRead) {
+		if (projectID == 0 || key.HasProject(projectID)) && canManageKey(id, key, store.KeysRead) && s.keyInMode(key) {
 			allowed = append(allowed, key)
 		}
 	}
@@ -146,6 +150,10 @@ func (s *Server) managedKey(c *gin.Context) (store.APIKey, bool) {
 		return key, false
 	}
 	if projectID != 0 && !key.HasProject(projectID) {
+		s.fail(c, store.ErrNotFound)
+		return key, false
+	}
+	if !s.keyInMode(key) {
 		s.fail(c, store.ErrNotFound)
 		return key, false
 	}

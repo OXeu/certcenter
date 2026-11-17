@@ -29,6 +29,7 @@ const (
 
 // KeyScope binds operations to one project; ProjectID zero represents all projects.
 type KeyScope struct {
+	Domain      string       `json:"domain,omitempty"`
 	ProjectID   uint         `json:"project_id"`
 	Permissions []Permission `json:"permissions"`
 }
@@ -46,18 +47,18 @@ func KeyPermissions() []Permission {
 
 // Valid reports whether the permission is supported.
 func (p Permission) Valid() bool {
-	return slices.Contains(KeyPermissions(), p)
+	return slices.Contains(KeyPermissions(), p) || slices.Contains(CertificatePermissions(), p)
 }
 
 // GlobalOnly reports whether the operation requires a wildcard scope.
 func (p Permission) GlobalOnly() bool {
-	return p == UsersRead || p == UsersWrite || p == UsersDelete || p == SettingsRead || p == SettingsWrite
+	return p == ProvidersRead || p == ProvidersWrite || p == UsersRead || p == UsersWrite || p == UsersDelete || p == SettingsRead || p == SettingsWrite
 }
 
 // Allows reports whether the key explicitly grants an operation in a project.
 func (k APIKey) Allows(projectID uint, permission Permission) bool {
 	for _, scope := range k.Scopes {
-		if (scope.ProjectID == 0 || (!permission.GlobalOnly() && scope.ProjectID == projectID)) && slices.Contains(scope.Permissions, permission) {
+		if scope.Domain == "" && (scope.ProjectID == 0 || (!permission.GlobalOnly() && scope.ProjectID == projectID)) && slices.Contains(scope.Permissions, permission) {
 			return true
 		}
 	}
@@ -67,7 +68,7 @@ func (k APIKey) Allows(projectID uint, permission Permission) bool {
 // HasProject reports whether any scope grants access to a project.
 func (k APIKey) HasProject(projectID uint) bool {
 	for _, scope := range k.Scopes {
-		if (scope.ProjectID == 0 || scope.ProjectID == projectID) && len(scope.Permissions) > 0 {
+		if scope.Domain == "" && (scope.ProjectID == 0 || scope.ProjectID == projectID) && len(scope.Permissions) > 0 {
 			return true
 		}
 	}
@@ -78,7 +79,7 @@ func (k APIKey) HasProject(projectID uint) bool {
 func (k APIKey) Covers(scopes []KeyScope) bool {
 	for _, scope := range scopes {
 		for _, permission := range scope.Permissions {
-			if !k.Allows(scope.ProjectID, permission) {
+			if (scope.Domain != "" && !k.AllowsDomain(scope.Domain, permission)) || (scope.Domain == "" && !k.Allows(scope.ProjectID, permission)) {
 				return false
 			}
 		}

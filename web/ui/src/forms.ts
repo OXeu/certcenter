@@ -14,6 +14,8 @@ export function createForm(page: import('./page.ts').PageContext) {
     token: '',
     scopes: null as ScopeDraft[] | null,
     scopeProjects: [] as Choice[],
+    scopeLabel: 'keys.scopeProject',
+    scopeHelp: 'keys.scopeHelp',
     scopePermissions: [] as Choice[],
     globalPermissions: [] as string[],
     nextScopeId: 0,

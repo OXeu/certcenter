@@ -18,9 +18,14 @@ import (
 // MountAPI registers the JSON API used by the web UI and by operators.
 func (s *Server) MountAPI(r *gin.Engine) {
 	management := r.Group("/api/v1", s.authenticator.ManagementMiddleware())
+	if s.cfg.Remote != nil {
+		management.Use(s.certificateKeyIdentity)
+	}
 	for _, op := range s.apiOperations() {
 		handlers := []gin.HandlerFunc{}
 		switch {
+		case op.Certificate:
+			handlers = append(handlers, op.authorize, s.authorizeCertificateOperation(op))
 		case op.Agent:
 			handlers = append(handlers, s.authenticator.BearerMiddleware())
 			for _, permission := range op.Permissions {

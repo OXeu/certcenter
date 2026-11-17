@@ -49,17 +49,25 @@ export function createWorkspace(
         state.environments = (await api(`${base}/environments`)).environments
       if (state.tab === 'keys') {
         const options = (await api('/api/v1/key-scopes')) as {
+          domains?: { name: string }[]
+          all_domains?: boolean
           projects: { slug: string; name: string }[]
           permissions: string[]
           global_permissions: string[]
           all_projects: boolean
         }
-        state.scopeProjects = (options.projects ?? []).map((p) => ({
+        const projects = data.certcenter
+          ? (options.domains ?? []).map((d) => ({ slug: d.name, name: d.name }))
+          : (options.projects ?? [])
+        state.scopeProjects = projects.map((p) => ({
           value: p.slug,
-          label: `${p.name} (${p.slug})`,
+          label: data.certcenter ? p.name : `${p.name} (${p.slug})`,
         }))
-        if (options.all_projects)
-          state.scopeProjects.push({ value: '*', label: page.msg('keys.allProjects') })
+        if (data.certcenter ? options.all_domains : options.all_projects)
+          state.scopeProjects.push({
+            value: '*',
+            label: page.msg(data.certcenter ? 'keys.allDomains' : 'keys.allProjects'),
+          })
         state.globalPermissions = options.global_permissions ?? []
         state.scopePermissions = (options.permissions ?? []).map((value) => ({
           value,
@@ -176,7 +184,7 @@ export function createWorkspace(
   function editKey(row?: {
     id: number
     name: string
-    scopes: { project: string; permissions: string[] }[]
+    scopes: { project?: string; domain?: string; permissions: string[] }[]
   }) {
     form.show(
       page.msg(row ? 'common.edit' : 'common.create'),
@@ -188,19 +196,33 @@ export function createWorkspace(
           permissions: [...permissions],
         }))
         if (scopes.some((scope) => !scope.project || !scope.permissions.length))
-          throw new Error(page.msg('keys.scopeRequired'), { cause: 422 })
+          throw new Error(
+            page.msg(data.certcenter ? 'keys.domainScopeRequired' : 'keys.scopeRequired'),
+            { cause: 422 },
+          )
         if (new Set(scopes.map((scope) => scope.project)).size !== scopes.length)
-          throw new Error(page.msg('keys.duplicateProject'), { cause: 422 })
+          throw new Error(
+            page.msg(data.certcenter ? 'keys.duplicateDomain' : 'keys.duplicateProject'),
+            { cause: 422 },
+          )
         const url = row ? `/api/v1/keys/${row.id}` : '/api/v1/keys'
-        const result = await mutate(url, row ? 'PATCH' : 'POST', { name: form.values.name, scopes })
+        const grants = data.certcenter
+          ? scopes.map(({ project, permissions }) => ({ domain: project, permissions }))
+          : scopes
+        const result = await mutate(url, row ? 'PATCH' : 'POST', {
+          name: form.values.name,
+          scopes: grants,
+        })
         if (result?.token) form.token = result.token
       },
     )
+    form.scopeLabel = data.certcenter ? 'keys.scopeDomain' : 'keys.scopeProject'
+    form.scopeHelp = data.certcenter ? 'keys.domainScopeHelp' : 'keys.scopeHelp'
     form.scopeProjects = [...state.scopeProjects]
     form.scopePermissions = [...state.scopePermissions]
     form.globalPermissions = [...state.globalPermissions]
     form.scopes = (row?.scopes ?? []).map((scope) => ({
-      project: scope.project,
+      project: (data.certcenter ? scope.domain : scope.project) ?? '',
       id: form.nextScopeId++,
       permissions: [...scope.permissions],
     }))

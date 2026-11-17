@@ -290,5 +290,17 @@
   "settings.languageRequired": "Select at least one language.",
   "settings.invalidMapping": "Use one unique group=admin or group=user mapping per line.",
   "settings.encryption": "Certificate encryption key",
-  "settings.encryptionHelp": "The stored encryption key is retained when saving settings. Changing it requires re-encrypting existing certificate material."
+  "settings.encryptionHelp": "The stored encryption key is retained when saving settings. Changing it requires re-encrypting existing certificate material.",
+  "keys.allDomains": "All domains",
+  "keys.scopeDomain": "Domain",
+  "keys.domainScopeHelp": "Choose domains and permissions. An empty scope list disables the key.",
+  "scope.domains:read": "Read domains",
+  "scope.domains:write": "Manage domains",
+  "scope.certificates:issue": "Issue certificates",
+  "scope.certificates:deploy": "Deploy certificates",
+  "scope.providers:read": "Read providers",
+  "scope.providers:write": "Manage providers",
+  "keys.domainDescription": "Manage API keys and choose the domains and operations each key can access.",
+  "keys.domainScopeRequired": "Choose a domain and at least one permission for each scope.",
+  "keys.duplicateDomain": "Combine permissions for the same domain in one scope."
 }

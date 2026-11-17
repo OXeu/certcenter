@@ -113,12 +113,12 @@ function cancel(event) {
         </div>
         <section v-if="form.scopes !== null" class="space-y-3">
           <h3 class="text-sm font-medium">{{ msg('keys.scopes') }}</h3>
-          <p class="field">{{ msg('keys.scopeHelp') }}</p>
+          <p class="field">{{ msg(form.scopeHelp) }}</p>
           <fieldset
             v-for="scope in form.scopes"
             :key="scope.id"
             class="card space-y-3"
-            :aria-label="msg('keys.scopeProject')"
+            :aria-label="msg(form.scopeLabel)"
           >
             <div class="flex items-center gap-2">
               <DropdownSelect
@@ -126,7 +126,7 @@ function cancel(event) {
                 v-model="scope.project"
                 @update:model-value="form.limitScope(scope)"
                 class="min-w-0 flex-1"
-                :label="msg('keys.scopeProject')"
+                :label="msg(form.scopeLabel)"
                 :options="form.scopeProjects"
                 :disabled="form.busy"
                 required

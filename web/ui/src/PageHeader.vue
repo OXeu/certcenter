@@ -32,7 +32,7 @@ const themeIcon = computed(() => (props.theme === 'dark' ? 'ri-moon-line' : 'ri-
 const data = /** @type {PageData} */ (props.data)
 const homeURL = computed(() => (data.certcenter ? '/domains' : '/projects'))
 const homeLabel = computed(() => (data.certcenter ? 'cert.domains' : 'nav.projects'))
-const showKeys = computed(() => data.loggedIn && !data.certcenter)
+const showKeys = computed(() => data.loggedIn)
 const manageProviders = computed(() => data.isAdmin && data.certcenter)
 const msg = /** @type {(id: string, vars?: Record<string, string>) => string} */ (props.msg)
 const avatarFailed = ref(false)
