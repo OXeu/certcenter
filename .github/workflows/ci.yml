@@ -67,56 +67,40 @@ jobs:
       - run: npm ci
       - name: Build Linux deployment package
         run: |
-          npm run build
           mkdir -p .tmp/scf
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o .tmp/scf/certcenter ./cmd/certcenter
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build BIN=.tmp/scf/certcenter
           cp scf_bootstrap .tmp/scf/scf_bootstrap
           chmod +x .tmp/scf/scf_bootstrap
-      - name: Install deployment CLI
-        run: npm install --prefix .tmp/scf-cli --no-audit --no-fund serverless-cloud-framework@1.4.1
       - name: Prepare runtime configuration
         env:
           RUNTIME_ENV: ${{ secrets.SCF_RUNTIME_ENV }}
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
         run: |
+          test -n "$TENCENT_SECRET_ID"
+          test -n "$TENCENT_SECRET_KEY"
           test -n "$SCF_REGION"
           test -n "$SCF_VPC_ID"
           test -n "$SCF_SUBNET_ID"
           test -n "$RUNTIME_ENV"
           umask 077
           printf '%s\n' "$RUNTIME_ENV" > .tmp/scf/.env.local
-          mkdir -p .tmp/scf-project
-          sed 's|src: ./.tmp/scf|src: ../scf|' serverless.yml > .tmp/scf-project/serverless.yml
+      - name: Deploy Tencent SCF
+        uses: woodyyan/tencent-serverless-action@56a4f1cf4ccd306834307c882a893ceb2c7e49e1
+        env:
+          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Prepare versioned release
+      - name: Configure fixed intranet egress IP
         env:
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
           TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
         run: |
           python -m venv .tmp/scf-venv
           .tmp/scf-venv/bin/pip install tencentcloud-sdk-python-scf==3.1.100
-          .tmp/scf-venv/bin/python tools/scf-release.py --remember
-      - name: Deploy Tencent SCF
-        working-directory: .tmp/scf-project
-        env:
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-        run: |
-          test -n "$TENCENT_SECRET_ID"
-          test -n "$TENCENT_SECRET_KEY"
-          previous=$(cat ../scf-previous-version)
-          if ! ../scf-cli/node_modules/.bin/scf deploy --stage production --inputs aliasFunctionVersion="$previous" aliasName='$DEFAULT' additionalVersionWeights='[]' > ../scf-deploy.log 2>&1; then
-            printf '%s\n' 'SCF deployment failed; inspect deployment events in Tencent Cloud.'
-            exit 1
-          fi
-      - name: Publish version and keep one instance running
-        env:
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-        run: |
           .tmp/scf-venv/bin/python tools/scf-network.py certcenter
-          .tmp/scf-venv/bin/python tools/scf-release.py
       - name: Verify deployed login page
         env:
           SCF_PUBLIC_URL: ${{ vars.SCF_PUBLIC_URL }}
@@ -126,4 +110,4 @@ jobs:
           grep -q 'page-data' .tmp/scf-login.html
       - name: Remove runtime configuration and packages
         if: always()
-        run: rm -rf .tmp/scf .tmp/scf-project .tmp/scf-login.html .tmp/scf-deploy.log .tmp/scf-previous-version
+        run: rm -rf .tmp/scf .tmp/scf-login.html
