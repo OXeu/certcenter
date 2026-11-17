@@ -14,7 +14,7 @@ import (
 	"github.com/OXeu/certcenter/internal/auth"
 	"github.com/OXeu/certcenter/internal/certconfig"
 	"github.com/OXeu/certcenter/internal/config"
-	"github.com/OXeu/configcenter/sdk/configcenter"
+	"github.com/OXeu/certcenter/internal/configcenter"
 )
 
 func settingsFlows(t *testing.T, local bool) (*flows, *Server) {

@@ -12,7 +12,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/OXeu/configcenter/sdk/configcenter"
+	"github.com/OXeu/certcenter/internal/configcenter"
 )
 
 func TestRemoteSettingsOverrideAllLocalOperationalVariables(t *testing.T) {

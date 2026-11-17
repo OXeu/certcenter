@@ -1,4 +1,4 @@
-.PHONY: all build assets lint test check sdk-lint sdk-test run fmt
+.PHONY: all build assets lint test check run fmt
 
 BIN ?= .tmp/bin/certcenter
 TMP_ROOT := $(CURDIR)/.tmp
@@ -26,15 +26,9 @@ lint: assets
 test: assets
 	$(GO_TEST) ./...
 
-sdk-lint:
-	cd sdk/configcenter && TMPDIR=$(TMP_ROOT) golangci-lint run ./...
-
-sdk-test:
-	cd sdk/configcenter && $(GO_TEST) ./...
-
-check: assets lint sdk-lint test sdk-test
+check: assets lint test
 
 # The binary loads ConfigCenter connection bootstrap from .env.local;
-# operational settings are read from ConfigCenter through the SDK.
+# operational settings are read from ConfigCenter through the internal configuration client.
 run: build
 	exec ./$(BIN)

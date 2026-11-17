@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OXeu/configcenter/sdk/configcenter"
+	"github.com/OXeu/certcenter/internal/configcenter"
 )
 
 func TestReadMissingSettingNamesKey(t *testing.T) {

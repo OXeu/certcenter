@@ -54,7 +54,6 @@ require (
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
-	go.etcd.io/bbolt v1.5.0 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	golang.org/x/arch v0.22.0 // indirect
 	golang.org/x/mod v0.37.0 // indirect
@@ -72,7 +71,6 @@ require (
 )
 
 require (
-	github.com/OXeu/configcenter/sdk/configcenter v0.0.0
 	github.com/alibabacloud-go/cas-20200407/v4 v4.7.4
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.2.4
 	github.com/alibabacloud-go/tea v1.5.2
@@ -81,7 +79,6 @@ require (
 	github.com/pkg/sftp v1.13.12
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.206
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.206
+	go.etcd.io/bbolt v1.5.0
 	golang.org/x/crypto v0.54.0
 )
-
-replace github.com/OXeu/configcenter/sdk/configcenter => ./sdk/configcenter

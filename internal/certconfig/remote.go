@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/OXeu/configcenter/sdk/configcenter"
+	"github.com/OXeu/certcenter/internal/configcenter"
 )
 
 // ErrMissing indicates a missing remote configuration record.
@@ -24,7 +24,7 @@ func DomainKey(name string) string {
 	return key
 }
 
-// Remote owns SDK access and serializes snapshot reads and writes.
+// Remote owns configuration access and serializes snapshot reads and writes.
 type Remote struct {
 	mu     sync.Mutex
 	client *configcenter.Client
@@ -41,10 +41,10 @@ func (r *Remote) RegistrationAllowed(ctx context.Context) (bool, error) {
 	return settings.Allowed, nil
 }
 
-// NewRemote connects a ConfigCenter SDK client.
+// NewRemote connects a ConfigCenter client.
 func NewRemote(client *configcenter.Client) *Remote { return &Remote{client: client} }
 
-// IsLocal reports whether settings are persisted in the SDK's local fallback.
+// IsLocal reports whether settings are persisted in the local fallback.
 func (r *Remote) IsLocal() bool { return r.client.IsLocal() }
 
 // Read fetches a JSON setting directly from ConfigCenter.
@@ -80,7 +80,7 @@ func (r *Remote) Providers(ctx context.Context) (Providers, error) {
 	return p, nil
 }
 
-// Domains returns all validated domain policies from one consistent SDK snapshot.
+// Domains returns all validated domain policies from one consistent configuration snapshot.
 func (r *Remote) Domains(ctx context.Context) ([]Domain, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -129,7 +129,7 @@ func (r *Remote) Domain(ctx context.Context, name string) (Domain, error) {
 	return domain, nil
 }
 
-// SaveDomain validates and persists a domain policy through the SDK.
+// SaveDomain validates and persists a domain policy through ConfigCenter.
 func (r *Remote) SaveDomain(ctx context.Context, domain Domain) error {
 	p, err := r.Providers(ctx)
 	if err != nil {
@@ -141,7 +141,7 @@ func (r *Remote) SaveDomain(ctx context.Context, domain Domain) error {
 	return r.Write(ctx, DomainKey(domain.Name), domain)
 }
 
-// Write stores a JSON setting through the ConfigCenter SDK.
+// Write stores a JSON setting through ConfigCenter.
 func (r *Remote) Write(ctx context.Context, key string, value any) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

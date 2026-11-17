@@ -16,12 +16,12 @@ import (
 
 	"github.com/OXeu/certcenter/internal/auth"
 	"github.com/OXeu/certcenter/internal/certconfig"
-	"github.com/OXeu/configcenter/sdk/configcenter"
+	"github.com/OXeu/certcenter/internal/configcenter"
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 )
 
-// LoadRemote initializes missing defaults and reads settings through the SDK.
+// LoadRemote initializes missing defaults and reads settings through ConfigCenter.
 func LoadRemote(ctx context.Context) (Config, error) {
 	lookup := os.LookupEnv
 	if err := godotenv.Load(lookupOr(lookup, "CC_ENV_FILE", DefaultEnvFile)); err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -36,7 +36,7 @@ func LoadRemote(ctx context.Context) (Config, error) {
 	}
 	client, err := configcenter.New(configcenter.Config{BaseURL: baseURL, APIKey: apiKey, Environment: lookupOr(lookup, "CC_CONFIGCENTER_ENVIRONMENT", "production"), LocalPath: lookupOr(lookup, "CC_CONFIGCENTER_LOCAL_PATH", ".tmp/certcenter-config.kv")})
 	if err != nil {
-		return Config{}, fmt.Errorf("configure SDK using CC_CONFIGCENTER_URL, CC_CONFIGCENTER_API_KEY and CC_CONFIGCENTER_LOCAL_PATH: %w", err)
+		return Config{}, fmt.Errorf("configure settings storage using CC_CONFIGCENTER_URL, CC_CONFIGCENTER_API_KEY and CC_CONFIGCENTER_LOCAL_PATH: %w", err)
 	}
 	if err := client.EnsureDefaults(ctx, defaults); err != nil {
 		return Config{}, fmt.Errorf("initialize settings: %w", err)
