@@ -8,6 +8,7 @@ import { mountToasts, notify, setToastTheme } from './toast.ts'
 
 const WorkspacePage = defineAsyncComponent(() => import('./WorkspacePage.vue'))
 const CertificatePage = defineAsyncComponent(() => import('./CertificatePage.vue'))
+const CertificateSettingsPage = defineAsyncComponent(() => import('./CertificateSettingsPage.vue'))
 const ProviderPage = defineAsyncComponent(() => import('./ProviderPage.vue'))
 
 const props = defineProps({ data: { type: Object, required: true } })
@@ -15,9 +16,8 @@ const data = /** @type {import('./data.ts').PageData} */ (props.data)
 const { theme, toggleTheme } = useTheme()
 watch(theme, (value) => setToastTheme(value))
 const isDocs = computed(() => data.page === 'docs')
-const isCertificatePage = computed(() =>
-  ['domains', 'certificates', 'certificate-settings'].includes(data.page),
-)
+const isCertificatePage = computed(() => ['domains', 'certificates'].includes(data.page))
+const isSettingsPage = computed(() => data.page === 'certificate-settings')
 const isProviderPage = computed(() => ['dns-providers', 'upstreams'].includes(data.page))
 const isWorkspace = computed(() =>
   ['projects', 'project', 'users', 'settings', 'keys'].includes(data.page),
@@ -63,6 +63,7 @@ onMounted(() => {
       }}</a>
       <WorkspacePage v-if="isWorkspace" :data="data" :page="page" :title="title" />
       <CertificatePage v-if="isCertificatePage" :data="data" :page="page" />
+      <CertificateSettingsPage v-if="isSettingsPage" :page="page" />
       <ProviderPage v-if="isProviderPage" :data="data" :page="page" />
     </PageHeader>
     <nav

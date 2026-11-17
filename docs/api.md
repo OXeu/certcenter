@@ -10,7 +10,8 @@
 | PUT    | `/api/v1/domains/:domain`                             | 保存 `version` 和完整 `certificates` 策略列表              |
 | POST   | `/api/v1/domains/:domain/certificates/:policy/issue`  | 排队签发/续签                                              |
 | POST   | `/api/v1/domains/:domain/certificates/:policy/deploy` | 排队部署最新有效证书                                       |
-| GET    | `/api/v1/certificate-settings`                        | 管理员读取不含凭据的设置摘要                               |
+| GET    | `/api/v1/certificate-settings`                        | 管理员读取可编辑设置、版本与待重启状态（不含凭据）         |
+| PUT    | `/api/v1/certificate-settings/:section`               | 管理员按分组保存设置                                       |
 | GET    | `/api/v1/users`                                       | 管理员列出用户                                             |
 | PATCH  | `/api/v1/users/:id`                                   | 管理员修改用户角色                                         |
 | DELETE | `/api/v1/users/:id`                                   | 管理员删除其他用户                                         |
@@ -88,3 +89,35 @@ GET 返回 `{ "version": "…", "providers": [{ "name": "…", "fields": { "kind
 `POST /api/v1/domains/:domain/delegations/check` 使用会话与 CSRF，返回 `{ "delegations": [{ "name": "…", "target": "…", "verified": true }] }`。检查目标来自服务端，不接受客户端指定的地址；结果反映当前解析状态，不替代 CA 的 DNS-01 验证。
 
 Cloudflare 账号的创建请求中 `dns` 为 `{ "kind": "cloudflare", "api_token": "…" }`，已有 Token 不会通过列表接口返回。DNS 列表额外返回 `delegation_zone`，为空表示尚未启用内置 DNS。
+
+## 修改服务设置
+
+设置页使用 `GET /api/v1/certificate-settings` 读取 `general`、`acme`、`dns`、`oauth`、`access`、`database` 六组设置。响应同时给出 `server_version`、`providers_version` 和 `restart_required`，并保留原有摘要字段。OAuth 密钥、数据库连接字符串、会话密钥和加密密钥不会出现在响应中；只返回是否已配置的标志。
+
+管理员使用 `PUT /api/v1/certificate-settings/:section` 保存一组配置，所有写操作都需要会话 CSRF token。`acme` 使用 `providers_version`，其他分组使用 `server_version`：
+
+```json
+{
+  "version": "GET 返回的 providers_version",
+  "values": {
+    "directory_url": "https://acme-staging-v02.api.letsencrypt.org/directory",
+    "email": "acme@example.com",
+    "accept_terms": true
+  }
+}
+```
+
+| section    | values 字段                                                                                 | 生效方式               |
+| ---------- | ------------------------------------------------------------------------------------------- | ---------------------- |
+| `general`  | `addr`、`public_url`、`session_ttl`（如 `24h`）、`languages`                                | 重启                   |
+| `acme`     | `directory_url`、`email`、`accept_terms`                                                    | 后续证书任务           |
+| `dns`      | `zone`、`listen_address`、`nameserver`、`addresses`                                         | 重启                   |
+| `oauth`    | `issuer_url`、`client_id`、`client_secret`、`scopes`、`redirect_url`、`groups_claim`        | 重启                   |
+| `access`   | `allow_registration`、`admin_groups`、`mapping`、`bootstrap`（`admin_email`、`admin_name`） | 注册开关即时，其余重启 |
+| `database` | `driver`、`dsn`                                                                             | 重启；不迁移数据       |
+
+省略的字段保留原值；OAuth `client_secret` 和数据库 `dsn` 留空也保留原值。数组及用户组 `mapping` 显式提交时替换整个对应字段，映射角色仅允许 `admin`、`user`。`languages` 至少包含一个支持的语言。存储中的 `session_ttl` 仍为纳秒整数，页面 API 用时间长度字符串。
+
+保存成功返回 `200` 及更新后的完整设置视图，不重新连接数据库、调用 OAuth 服务或重启 DNS 监听。返回的 `restart_required` 与当前运行配置比较；进程重启后使用已保存配置。未知分组返回 `404`，不合法字段或配置返回 `400`，过期版本返回 `409`，存储写入失败返回 `503`。检查和保存受当前管理实例的互斥锁保护，外部 ConfigCenter 写入或其他实例仍需避免并发覆盖。
+
+设置写入只修改所选分组，并保留未编辑分组、DNS/上游凭据、已有加密密钥及未知扩展字段。页面不会接受加密密钥轮换参数。

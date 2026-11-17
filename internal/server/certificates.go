@@ -40,6 +40,7 @@ func (s *Server) mountCertificates(r *gin.Engine) {
 	api.POST("/domains/:domain/delegations/check", s.checkDomainDelegations)
 	api.POST("/domains/:domain/certificates/:policy/:action", s.queueCertificate)
 	api.GET("/certificate-settings", auth.RequireAdmin(), s.certificateSettings)
+	api.PUT("/certificate-settings/:section", auth.RequireAdmin(), s.saveCertificateSettings)
 	api.GET("/users", auth.RequireAdmin(), s.apiListUsers)
 	api.PATCH("/users/:id", auth.RequireAdmin(), s.apiSetRole)
 	api.DELETE("/users/:id", auth.RequireAdmin(), s.apiDeleteUser)
@@ -245,14 +246,4 @@ func providerNames(providers certconfig.Providers) (dns, upstreams []string) {
 	sort.Strings(dns)
 	sort.Strings(upstreams)
 	return dns, upstreams
-}
-
-func (s *Server) certificateSettings(c *gin.Context) {
-	providers, err := s.cfg.Remote.Providers(c.Request.Context())
-	if err != nil {
-		s.certificateError(c, err)
-		return
-	}
-	dns, upstreams := providerNames(providers)
-	c.JSON(http.StatusOK, gin.H{"local": s.cfg.Remote.IsLocal(), "configcenter_url": s.cfg.ConfigCenterURL, "dns_providers": dns, "upstreams": upstreams, "directory_url": providers.ACME.DirectoryURL, "email": providers.ACME.Email, "accept_terms": providers.ACME.AcceptTerms, "delegation_zone": s.cfg.ACMEDNS.Zone})
 }

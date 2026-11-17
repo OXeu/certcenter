@@ -23,17 +23,9 @@ const {
   providerLabel,
 } = createCertificateWorkspace(props.data, props.page)
 const isDomains = computed(() => props.data.page === 'domains')
-const isSettings = computed(() => props.data.page === 'certificate-settings')
 const policies = computed(() => state.detail?.domain.certificates ?? [])
 const tabs = ['policies', 'history', 'logs']
 const canCreate = computed(() => isDomains.value && props.data.isAdmin)
-const settingsHelp = computed(() =>
-  state.settings?.local ? 'cert.localSettingsHelp' : 'cert.settingsHelp',
-)
-const settingsURL = computed(() => {
-  const url = state.settings?.configcenter_url ?? ''
-  return /^https?:\/\//.test(url) ? url : '#'
-})
 function domainURL(name: string) {
   return `/domains/${encodeURIComponent(name)}`
 }
@@ -89,25 +81,6 @@ onUnmounted(() => {
       </tbody>
     </table>
   </div>
-
-  <section v-if="isSettings && state.settings" class="card space-y-3">
-    <p>{{ msg(settingsHelp) }}</p>
-    <a v-if="!state.settings.local" class="btn-outline" :href="settingsURL">{{
-      msg('cert.openConfigCenter')
-    }}</a>
-    <dl class="space-y-2">
-      <dt class="font-medium">{{ msg('cert.authority') }}</dt>
-      <dd class="break-all">{{ state.settings.directory_url }}</dd>
-      <dt class="font-medium">{{ msg('users.email') }}</dt>
-      <dd>{{ state.settings.email }}</dd>
-      <dt class="font-medium">{{ msg('cert.terms') }}</dt>
-      <dd>{{ yes(state.settings.accept_terms) }}</dd>
-      <dt class="font-medium">{{ msg('cert.dnsProvider') }}</dt>
-      <dd>{{ state.settings.dns_providers.join(', ') }}</dd>
-      <dt class="font-medium">{{ msg('cert.upstreams') }}</dt>
-      <dd>{{ state.settings.upstreams.join(', ') }}</dd>
-    </dl>
-  </section>
 
   <template v-if="state.detail">
     <nav class="mb-4 flex gap-2" :aria-label="msg('cert.certificates')">

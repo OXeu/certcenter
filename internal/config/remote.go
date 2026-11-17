@@ -29,9 +29,7 @@ func LoadRemote(ctx context.Context) (Config, error) {
 	}
 	baseURL := lookupOr(lookup, "CC_CONFIGCENTER_URL", "")
 	apiKey := lookupOr(lookup, "CC_CONFIGCENTER_API_KEY", "")
-	cfg := Config{Addr: "127.0.0.1:8081", DatabaseDriver: "sqlite", DatabaseDSN: "file:.tmp/certcenter.db", PublicURL: "http://127.0.0.1:8081", SessionTTL: 24 * time.Hour, Languages: []string{"en", "zh-CN"}, Bootstrap: Bootstrap{AdminEmail: "admin@localhost", AdminName: "admin"}}
-	cfg.OAuth = auth.Config{Scopes: []string{"openid", "profile", "email", "groups"}, GroupsClaim: "groups"}
-	cfg.Groups = auth.GroupPolicy{AdminGroups: []string{"certcenter-admin"}, Mapping: map[string]string{}}
+	cfg := DefaultServer()
 	defaults, err := configurationDefaults(cfg)
 	if err != nil {
 		return Config{}, err
@@ -48,13 +46,14 @@ func LoadRemote(ctx context.Context) (Config, error) {
 		return Config{}, fmt.Errorf("load server settings: %w", err)
 	}
 	cfg.Remote, cfg.ConfigCenterURL = remote, baseURL
-	if err := validateServerConfig(&cfg); err != nil {
+	if err := cfg.Validate(); err != nil {
 		return Config{}, fmt.Errorf("validate key %q: %w", "certcenter.server", err)
 	}
 	return cfg, nil
 }
 
-func validateServerConfig(cfg *Config) error {
+// Validate checks and normalizes settings before startup or persistence.
+func (cfg *Config) Validate() error {
 	if err := cfg.ACMEDNS.Validate(); err != nil {
 		return fmt.Errorf("validate acme_dns: %w", err)
 	}
@@ -103,4 +102,12 @@ func configurationDefaults(cfg Config) (map[string]string, error) {
 		return nil, fmt.Errorf("encode default key certcenter.providers: %w", err)
 	}
 	return map[string]string{"certcenter.server": string(server), "certcenter.providers": string(providers)}, nil
+}
+
+// DefaultServer returns fresh operational defaults before stored settings are applied.
+func DefaultServer() Config {
+	cfg := Config{Addr: "127.0.0.1:8081", DatabaseDriver: "sqlite", DatabaseDSN: "file:.tmp/certcenter.db", PublicURL: "http://127.0.0.1:8081", SessionTTL: 24 * time.Hour, Languages: []string{"en", "zh-CN"}, Bootstrap: Bootstrap{AdminEmail: "admin@localhost", AdminName: "admin"}}
+	cfg.OAuth = auth.Config{Scopes: []string{"openid", "profile", "email", "groups"}, GroupsClaim: "groups"}
+	cfg.Groups = auth.GroupPolicy{AdminGroups: []string{"certcenter-admin"}, Mapping: map[string]string{}}
+	return cfg
 }

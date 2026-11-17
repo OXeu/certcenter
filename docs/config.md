@@ -4,6 +4,14 @@ CertCenter 使用 `github.com/OXeu/configcenter/sdk/configcenter`。仓库保留
 
 本地仅配置 `CC_CONFIGCENTER_URL`、`CC_CONFIGCENTER_API_KEY`、`CC_CONFIGCENTER_ENVIRONMENT`、`CC_CONFIGCENTER_LOCAL_PATH` 和可选的 `CC_ENV_FILE`；其他环境变量不作为 CertCenter 业务配置来源。
 
+## 在设置页修改配置
+
+管理员登录后，可直接在“设置”页编辑并保存以下分组，无需跳转 ConfigCenter：服务参数、证书颁发机构（ACME）、CNAME 委派验证、OAuth 登录、注册与权限、数据库。输入均在编辑对话框中，保存结果通过 toast 提示。
+
+ACME 和注册开关在后续操作中读取新值；服务监听地址、公开地址、会话、语言、OAuth、用户组、数据库和内置 DNS 在重启后生效。设置页展示保存后的配置及“待重启生效”状态。每组独立保存并检查版本，其他管理员修改后旧表单会被拒绝，需刷新后再编辑。
+
+OAuth 密钥、数据库连接字符串不回显，编辑时留空表示保留原值。证书加密密钥不会通过页面返回或修改，保存会原样保留它。更换数据库连接不会迁移数据；应先准备目标数据库再重启切换。DNS 服务商和部署上游账号仍在各自管理页面编辑。
+
 ## 首次启动自动初始化
 
 每次启动通过 `EnsureDefaults` 检查配置，自动创建缺失的 `certcenter.server`、`certcenter.providers` 两个配置项。服务、数据库、OAuth、用户组和 ACME 等固定设置的默认值保存在这两个 JSON 中；DNS 和部署账号列表默认为空，不生成示例账号。既有配置项（包括空值或错误值）保持原样，避免替换管理员配置和加密密钥。
@@ -18,7 +26,7 @@ SDK 提供 `ReadMany(ctx, keys)` 和 `PutMany(ctx, values)`，分别使用一次
 
 URL 和 API key 同时为空时，SDK 使用 [bbolt](https://github.com/etcd-io/bbolt)，默认文件是 `.tmp/certcenter-config.kv`，按环境隔离，文件权限为 `0600`。每次操作以事务完成并关闭文件；缺失配置在同一事务中初始化，已有值不会被默认值覆盖。CertCenter 首次启动生成并保存加密密钥，以后重启复用它。
 
-基础配置初始化后，使用同一 SDK 编辑 `certcenter.server`、`certcenter.providers` 等键。OAuth 登录可用后，管理员也可直接在“DNS 服务商”和“部署上游”页面添加、编辑和删除账号。以下示例函数供调用方程序使用（程序应在项目根目录运行，或传入相同的绝对文件路径）：
+基础配置初始化后，使用同一 SDK 编辑 `certcenter.server`、`certcenter.providers` 等键。首次 OAuth 登录配置完成后，管理员直接在“设置”页修改服务、ACME、OAuth 和内置 DNS 等配置，在“DNS 服务商”和“部署上游”页面管理账号。以下示例函数供调用方程序使用（程序应在项目根目录运行，或传入相同的绝对文件路径）：
 
 ```go
 func saveLocalSettings(ctx context.Context, key, jsonValue string) error {
@@ -40,7 +48,7 @@ func saveLocalSettings(ctx context.Context, key, jsonValue string) error {
 
 ## certcenter.server
 
-启动时自动创建此配置项；可在 ConfigCenter 中编辑。以下 JSON 展示可填写的字段：
+启动时自动创建此配置项。登录后在“设置”页编辑；以下 JSON 供首次启动配置及 SDK 集成参考：
 
 ```json
 {
@@ -63,7 +71,7 @@ func saveLocalSettings(ctx context.Context, key, jsonValue string) error {
 }
 ```
 
-使用 `openssl rand -base64 32` 生成加密密钥，并安全保存到 ConfigCenter。不得替换已使用的加密密钥，除非同时实施数据重新加密。OAuth 回调默认为 `public_url + /oauth/callback`；可用 `oauth.redirect_url` 覆盖。管理员邮箱须与身份提供者返回的邮箱一致。会话默认 24 小时，可用 `session_ttl` 指定 Go duration 的纳秒数。
+首次启动会生成并保存加密密钥，请妥善备份。不得替换已使用的加密密钥，除非同时实施数据重新加密；设置页会始终保留它。OAuth 回调默认为 `public_url + /oauth/callback`；可用 `oauth.redirect_url` 覆盖。管理员邮箱须与身份提供者返回的邮箱一致。会话默认 24 小时，可用 `session_ttl` 指定 Go duration 的纳秒数。
 
 MySQL 示例：`database_driver` 为 `mysql`，`database_dsn` 为 `user:password@tcp(host:3306)/certcenter?charset=utf8mb4`，程序自动启用 `parseTime`。生产数据库及加密密钥需要备份。SQLite 默认路径仅用于开发。
 
@@ -120,7 +128,7 @@ MySQL 示例：`database_driver` 为 `mysql`，`database_dsn` 为 `user:password
 
 用户不再向外部服务注册账号，也不填写 `username`、`password`、`subdomain`、`fulldomain` 或 JSON 映射。CertCenter 内置权威 DNS 应答和 TXT 发布能力，不开放匿名注册或公网 TXT 写入接口。
 
-管理员先在 `certcenter.server` 配置一次公共验证区域，重启服务：
+管理员在“设置 → CNAME 委派验证”填写公共验证区域、监听地址、名称服务器和 IP 地址，保存后重启服务即可。对应的存储结构如下：
 
 ```json
 {
@@ -133,7 +141,7 @@ MySQL 示例：`database_driver` 为 `mysql`，`database_dsn` 为 `user:password
 }
 ```
 
-这是需要合并到现有 server 对象的字段，不能替换整个 server 配置。以上域名和地址是示例，应替换成自己控制的域名及公网 IP。`zone` 为空表示停用内置 DNS；`addresses` 可包含 IPv4 和 IPv6。若 nameserver 位于验证区域内，内置服务会回答其 A/AAAA 查询。
+设置页会自动合并这些字段并保留其他配置；通过 SDK 操作时也应合并到现有 server 对象，不能替换整个配置。以上域名和地址是示例，应替换成自己控制的域名及公网 IP。`zone` 为空表示停用内置 DNS；`addresses` 可包含 IPv4 和 IPv6。若 nameserver 位于验证区域内，内置服务会回答其 A/AAAA 查询。
 
 在 `cert.example.com` 的 DNS 中一次性添加：
 

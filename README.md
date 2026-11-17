@@ -65,7 +65,7 @@ Vite 开发服务代理至 `127.0.0.1:8081`。构建输出在 `.tmp/ui`、`.tmp/
 
 ## 腾讯云函数部署
 
-`serverless.yml` 将应用部署为广州区的 `certcenter` Web 函数，监听地址需在 ConfigCenter 的 `certcenter.server` 中配置为 `0.0.0.0:9000`。数据库使用有持久存储的 MySQL；函数本地 KV 和 SQLite 不用于生产部署。
+`serverless.yml` 将应用部署为广州区的 `certcenter` Web 函数，监听地址需在设置页的“服务参数”中配置为 `0.0.0.0:9000` 并重启；首次启动也可通过 SDK 初始化 `certcenter.server`。数据库使用有持久存储的 MySQL；函数本地 KV 和 SQLite 不用于生产部署。
 
 GitHub Actions 的 `production` 部署使用以下仓库配置：
 

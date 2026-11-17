@@ -50,15 +50,6 @@ type DomainView = {
   upstreams: string[]
   delegations: { name: string; target: string }[]
 }
-type Settings = {
-  local: boolean
-  configcenter_url: string
-  dns_providers: string[]
-  upstreams: string[]
-  directory_url: string
-  email: string
-  accept_terms: boolean
-}
 
 export function createCertificateWorkspace(data: PageData, page: PageContext) {
   const state = reactive({
@@ -67,7 +58,6 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
     checks: {} as Record<string, boolean>,
     domains: [] as { name: string; owner: string; count: number }[],
     detail: null as DomainView | null,
-    settings: null as Settings | null,
     tab: 'policies',
   })
   const form = createForm(page)
@@ -79,8 +69,6 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
       if (data.page === 'domains') {
         const response = (await api('/api/v1/domains')) as { domains: typeof state.domains }
         state.domains = response.domains
-      } else if (data.page === 'certificate-settings') {
-        state.settings = (await api('/api/v1/certificate-settings')) as Settings
       } else state.detail = (await api(base)) as DomainView
     } catch (err) {
       page.report(err)

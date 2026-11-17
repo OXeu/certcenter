@@ -4,6 +4,7 @@ import { api } from './core.ts'
 import { createForm } from './forms.ts'
 import { notify } from './toast.ts'
 export { createProviderWorkspace } from './providers.ts'
+export { createSettingsWorkspace } from './settings.ts'
 
 /** @param {string} value */
 const enc = (value: string) => encodeURIComponent(value)

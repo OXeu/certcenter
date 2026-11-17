@@ -4,7 +4,7 @@ CertCenter 按域名组织证书。管理员添加域名及所有者邮箱；所
 
 ## 签发流程
 
-1. 配置 ACME，并由管理员在“DNS 服务商”和“部署上游”页面添加账号，见 [配置指南](/docs/config)。先使用 Let's Encrypt staging 目录验证流程，再切换生产目录。
+1. 管理员在“设置”页配置 ACME，在“DNS 服务商”和“部署上游”页面添加账号，见 [配置指南](/docs/config)。先使用 Let's Encrypt staging 目录验证流程，再切换生产目录。
 2. 进入“域名”，添加 `example.com`，设置所有者邮箱。
 3. 在域名页添加证书策略，例如标识 `wildcard`，域名填写 `example.com` 和 `*.example.com`（换行或逗号分隔），选择 DNS provider。
 4. 使用本项目内置 CNAME 验证时，管理员先按[配置指南](/docs/config)启用公网验证 DNS。用户只需在原 DNS 服务商处添加页面生成的 CNAME，并点击“检查 CNAME”；无需注册凭据或 JSON。
@@ -25,4 +25,4 @@ CertCenter 按域名组织证书。管理员添加域名及所有者邮箱；所
 
 DNS 服务商支持阿里云、腾讯云、Cloudflare，以及本项目内置 acme-dns CNAME 验证；部署上游支持腾讯云、阿里云及 SSH。账号保存后可在证书策略中选择，已有密钥留空表示保留，被策略引用的账号不能删除。
 
-设置页展示服务商名称及 ACME 地址；远端模式提供 ConfigCenter 链接，本地模式显示本地配置说明。页面 API 不返回 DNS 凭据、云密钥、SSH 私钥、证书私钥或 ACME 账户私钥。
+设置页可直接编辑服务参数、ACME、CNAME 委派验证、OAuth、注册权限和数据库，保存后提示生效方式，无需跳转到 ConfigCenter。页面 API 不返回 DNS 凭据、云密钥、SSH 私钥、证书私钥或 ACME 账户私钥。
