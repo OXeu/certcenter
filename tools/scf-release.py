@@ -18,12 +18,31 @@ def release():
     def call(action, **params):
         request = getattr(models, action + 'Request')()
         request.from_json_string(json.dumps({'FunctionName': 'certcenter', 'Namespace': 'default', **params}))
+        retryable_actions = {
+            'GetFunction', 'ListAliases', 'GetProvisionedConcurrencyConfig',
+            'PutProvisionedConcurrencyConfig', 'UpdateAlias', 'DeleteProvisionedConcurrencyConfig',
+        }
         for attempt in range(10):
             try:
                 return json.loads(getattr(client, action)(request).to_json_string())
             except TencentCloudSDKException as error:
-                if action not in ('GetFunction', 'GetProvisionedConcurrencyConfig') or error.code != 'InternalError' or attempt == 9:
-                    raise
+                transient = error.code.startswith('InternalError') or error.code == 'FailedOperation.ProvisionedInProgress'
+                if not transient or action not in retryable_actions:
+                    raise RuntimeError(f'{action}: {error.code}') from error
+                if action == 'PutProvisionedConcurrencyConfig':
+                    allocated = call('GetProvisionedConcurrencyConfig')['Allocated']
+                    if any(item['Qualifier'] == params['Qualifier'] and item['AllocatedProvisionedConcurrencyNum'] == 1 for item in allocated):
+                        return {}
+                if action == 'UpdateAlias':
+                    aliases = call('ListAliases')['Aliases']
+                    if any(alias['Name'] == params['Name'] and alias['FunctionVersion'] == params['FunctionVersion'] for alias in aliases):
+                        return {}
+                if action == 'DeleteProvisionedConcurrencyConfig':
+                    allocated = call('GetProvisionedConcurrencyConfig')['Allocated']
+                    if all(item['Qualifier'] != params['Qualifier'] for item in allocated):
+                        return {}
+                if attempt == 9:
+                    raise RuntimeError(f'{action}: {error.code} after retries') from error
                 time.sleep(3)
 
     aliases = call('ListAliases')['Aliases']
@@ -64,8 +83,8 @@ def release():
     except (TencentCloudSDKException, RuntimeError):
         try:
             call('DeleteProvisionedConcurrencyConfig', Qualifier=version)
-        except TencentCloudSDKException as cleanup_error:
-            print('Provision cleanup requires attention:', version, cleanup_error.code, file=sys.stderr)
+        except (TencentCloudSDKException, RuntimeError) as cleanup_error:
+            print('Provision cleanup requires attention:', version, getattr(cleanup_error, 'code', str(cleanup_error)), file=sys.stderr)
         raise
 
     call('UpdateAlias', Name='$DEFAULT', FunctionVersion=version, RoutingConfig={'AdditionalVersionWeights': []})
