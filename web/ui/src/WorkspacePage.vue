@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted } from 'vue'
 import DangerActions from './DangerActions.vue'
 const DialogPanel = defineAsyncComponent(() => import('./DialogPanel.vue'))
@@ -9,8 +9,8 @@ const props = defineProps({
   page: { type: Object, required: true },
   title: { type: String, required: true },
 })
-const data = /** @type {import('./data.ts').PageData} */ (props.data)
-const page = /** @type {import('./page.ts').PageContext} */ (props.page)
+const data = props.data as import('./data.ts').PageData
+const page = props.page as import('./page.ts').PageContext
 const { msg } = page
 const { state, form, refresh, select, edit, toggleView, actionsFor, environment, newEnvironment } =
   createWorkspace(data, page)
@@ -32,8 +32,7 @@ const columns = computed(() => {
   if (state.tab === 'proposals') return ['environment', 'key', 'action', 'value', 'reason']
   return ['key', 'value', 'description', 'updated_at']
 })
-/** @type {Record<string, string>} */
-const labels = {
+const labels: Record<string, string> = {
   name: 'common.name',
   slug: 'common.slug',
   description: 'common.description',
@@ -50,8 +49,7 @@ const labels = {
   reason: 'projects.proposalReason',
   updated_at: 'projects.updated',
 }
-/** @param {any} row @param {string} column */
-function cell(row, column) {
+function cell(row: any, column: string) {
   if (data.page === 'settings')
     return msg(
       column === 'key'
@@ -66,8 +64,7 @@ function cell(row, column) {
     return row[column] ? new Date(row[column]).toLocaleString(data.lang) : ''
   return row[column] ?? ''
 }
-/** @param {{ project?: string; domain?: string; permissions: string[] }[]} scopes */
-function scopeText(scopes) {
+function scopeText(scopes: { project?: string; domain?: string; permissions: string[] }[]) {
   if (!scopes.length) return msg('keys.noScopes')
   return scopes
     .map((scope) => {

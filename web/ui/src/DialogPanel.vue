@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch, nextTick, useId, onBeforeUnmount } from 'vue'
 import { toastTarget } from './toast-host.ts'
 import DropdownSelect from '@oxeu/center-common/ui/DropdownSelect.vue'
@@ -10,18 +10,18 @@ const props = defineProps({
 })
 const visibleFields = computed(() =>
   props.form.fields.filter(
-    (/** @type {any} */ field) => !field.kinds || field.kinds.includes(props.form.values.kind),
+    (field: any) => !field.kinds || field.kinds.includes(props.form.values.kind),
   ),
 )
 const canAddScope = computed(() =>
   props.form.scopeProjects.some(
-    (/** @type {import('./forms.ts').Choice} */ option) =>
+    (option: import('./forms.ts').Choice) =>
       !props.form.scopes?.some(
-        (/** @type {import('./forms.ts').ScopeDraft} */ scope) => scope.project === option.value,
+        (scope: import('./forms.ts').ScopeDraft) => scope.project === option.value,
       ),
   ),
 )
-const dialog = ref(/** @type {HTMLDialogElement | null} */ (null))
+const dialog = ref<HTMLDialogElement | null>(null)
 watch(
   () => props.form.open,
   async (open) => {
@@ -40,8 +40,7 @@ function releaseToasts() {
   if (toastTarget.value === dialog.value) toastTarget.value = 'body'
 }
 onBeforeUnmount(releaseToasts)
-/** @param {Event} event */
-function cancel(event) {
+function cancel(event: Event) {
   if (props.form.busy) {
     event.preventDefault()
     return

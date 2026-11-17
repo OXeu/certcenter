@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import PageHeader from './PageHeader.vue'
 import ToastViewport from './ToastViewport.vue'
@@ -13,7 +13,7 @@ const CertificateSettingsPage = defineAsyncComponent(() => import('./Certificate
 const ProviderPage = defineAsyncComponent(() => import('./ProviderPage.vue'))
 
 const props = defineProps({ data: { type: Object, required: true } })
-const data = /** @type {import('./data.ts').PageData} */ (props.data)
+const data = props.data as import('./data.ts').PageData
 const { theme, toggleTheme } = useTheme()
 watch(theme, (value) => setToastTheme(value))
 const isCertificatePage = computed(() => ['domains', 'certificates'].includes(data.page))
