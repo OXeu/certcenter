@@ -191,11 +191,12 @@
   "cert.fingerprint": "SHA-256 fingerprint",
   "cert.emptyDomains": "No domains yet. An administrator can add the first domain.",
   "cert.emptyCertificates": "Add a certificate policy to begin.",
-  "cert.policyHelp": "Policies are stored in ConfigCenter. Automatic renewal starts issuance for new policies. Cloud deployment uploads to the certificate library; SSH also installs files and can reload a service.",
+  "cert.policyHelp": "Policies take effect after saving. Automatic renewal starts issuance for new policies. Cloud deployment uploads to the certificate library; SSH also installs files and can reload a service.",
   "cert.delegation": "DNS challenge delegation",
   "cert.delegationHelp": "Create these CNAME records once at your DNS provider before issuing. The delegated acme-dns server must be reachable publicly.",
   "cert.settingsHelp": "Server settings, ACME accounts, DNS credentials and upstreams are configured in ConfigCenter. Provider settings refresh before each job; server settings require a restart. Private keys and credentials are never returned by this page.",
   "cert.openConfigCenter": "Open ConfigCenter",
   "cert.authority": "ACME directory",
-  "cert.terms": "ACME terms accepted"
+  "cert.terms": "ACME terms accepted",
+  "cert.localSettingsHelp": "Remote ConfigCenter is not configured. Settings are stored in local bbolt KV through the SDK. Use the SDK to configure OAuth, DNS credentials and upstreams; restart after changing server settings."
 }

@@ -62,8 +62,8 @@ func (s *Server) certificateError(c *gin.Context, err error) {
 	case errors.Is(err, store.ErrBusy):
 		c.JSON(http.StatusConflict, gin.H{"error": "certificate operation already queued or running"})
 	default:
-		s.log.Error("certificate request failed", "path", c.Request.URL.Path)
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "certificate service unavailable; check ConfigCenter and database connectivity"})
+		s.log.Error("certificate request failed", "path", c.Request.URL.Path, "error", err)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "certificate service unavailable; check settings storage and database connectivity"})
 	}
 }
 
@@ -238,5 +238,5 @@ func (s *Server) certificateSettings(c *gin.Context) {
 		return
 	}
 	dns, upstreams := providerNames(providers)
-	c.JSON(http.StatusOK, gin.H{"configcenter_url": s.cfg.ConfigCenterURL, "dns_providers": dns, "upstreams": upstreams, "directory_url": providers.ACME.DirectoryURL, "email": providers.ACME.Email, "accept_terms": providers.ACME.AcceptTerms})
+	c.JSON(http.StatusOK, gin.H{"local": s.cfg.Remote.IsLocal(), "configcenter_url": s.cfg.ConfigCenterURL, "dns_providers": dns, "upstreams": upstreams, "directory_url": providers.ACME.DirectoryURL, "email": providers.ACME.Email, "accept_terms": providers.ACME.AcceptTerms})
 }

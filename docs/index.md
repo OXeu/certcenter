@@ -4,7 +4,7 @@ CertCenter 按域名组织证书。管理员添加域名及所有者邮箱；所
 
 ## 签发流程
 
-1. 在 ConfigCenter 中配置 ACME、DNS provider 和部署上游，见 [配置指南](/docs/sdk)。先使用 Let's Encrypt staging 目录验证流程，再切换生产目录。
+1. 通过 ConfigCenter SDK 的远端或本地存储配置 ACME、DNS provider 和部署上游，见 [配置指南](/docs/sdk)。先使用 Let's Encrypt staging 目录验证流程，再切换生产目录。
 2. 进入“域名”，添加 `example.com`，设置所有者邮箱。
 3. 在域名页添加证书策略，例如标识 `wildcard`，域名填写 `example.com` 和 `*.example.com`（换行或逗号分隔），选择 DNS provider。
 4. 若使用 acme-dns，提前配置注册凭据，并在 DNS 控制台创建页面显示的 CNAME 记录。
@@ -21,6 +21,6 @@ CertCenter 按域名组织证书。管理员添加域名及所有者邮箱；所
 
 ## 部署含义
 
-腾讯云和阿里云上传证书到 SSL/CAS 证书库，不自动绑定具体云产品。SSH 使用 SFTP 写入证书和私钥，限制权限为 `0600`，然后运行可选的重载命令。SSH 凭据、固定主机公钥、路径和命令只能在 ConfigCenter 中配置。
+腾讯云和阿里云上传证书到 SSL/CAS 证书库，不自动绑定具体云产品。SSH 使用 SFTP 写入证书和私钥，限制权限为 `0600`，然后运行可选的重载命令。SSH 凭据、固定主机公钥、路径和命令通过配置 SDK 管理。
 
-设置页展示服务商名称及 ACME 地址，提供 ConfigCenter 链接；页面 API 不返回 DNS 凭据、云密钥、SSH 私钥、证书私钥或 ACME 账户私钥。
+设置页展示服务商名称及 ACME 地址；远端模式提供 ConfigCenter 链接，本地模式显示本地配置说明。页面 API 不返回 DNS 凭据、云密钥、SSH 私钥、证书私钥或 ACME 账户私钥。

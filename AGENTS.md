@@ -7,7 +7,7 @@ Rules for anyone (human or model) changing certcenter. They are enforced where a
 - `cmd/certcenter` — main, flags-free, environment driven. `internal/config` loads `.env.local` (or `CC_ENV_FILE`) for ConfigCenter connection bootstrap, then reads settings through the SDK; exported bootstrap variables are never overridden. Never print secret values.
 - `internal/config` — loads the env file and reads every environment variable here and nowhere else.
 - `internal/store` — gorm models and all queries; one `Store` method per query. Certificate material and ACME keys are encrypted in the database.
-- `internal/certconfig` — ConfigCenter SDK settings, domain policies and provider credentials.
+- `internal/certconfig` — ConfigCenter SDK settings, domain policies and provider credentials; the SDK uses local bbolt KV when no remote connection is configured.
 - `internal/certificates` — ACME issuance, persistent jobs, renewal scheduling and deployment coordination.
 - `internal/dnsprovider` / `internal/upstream` — DNS validation and certificate deployment adapters.
 - `internal/auth` — sessions, roles, CSRF, API-key and agent middleware, OAuth provider adapter.
@@ -72,7 +72,7 @@ Commit messages follow [`docs/commits.md`](docs/commits.md): Conventional Commit
 - `go test ./...` in `sdk/configcenter`; the live test runs only with `CC_TEST_URL` and `CC_TEST_KEY`.
 - `npm test` — Vitest and Vue Test Utils with jsdom cover dialogs, requests, permissions, translations, toast setup and template rules.
 - `internal/server/e2e_test.go` renders every page, logs in through a fake IdP and proves a key of one project cannot reach another. Its `TestMain` (`scratch_test.go`) points `TMPDIR` at `.tmp/go-test` so `go test` run directly, without `make`, also keeps its scratch files in the workspace.
-- Test databases are `mode=memory`; tests never open a file database, so a failing run leaves nothing behind in a package directory.
+- Relational test databases use `mode=memory`. SDK local KV tests use isolated bbolt files under the repository root `.tmp/` and clean them up; no database is written into a package directory.
 
 ## Definition of done
 

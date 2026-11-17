@@ -15,6 +15,9 @@ const isSettings = computed(() => props.data.page === 'certificate-settings')
 const policies = computed(() => state.detail?.domain.certificates ?? [])
 const tabs = ['policies', 'history', 'logs']
 const canCreate = computed(() => isDomains.value && props.data.isAdmin)
+const settingsHelp = computed(() =>
+  state.settings?.local ? 'cert.localSettingsHelp' : 'cert.settingsHelp',
+)
 const settingsURL = computed(() => {
   const url = state.settings?.configcenter_url ?? ''
   return /^https?:\/\//.test(url) ? url : '#'
@@ -77,8 +80,10 @@ onUnmounted(() => {
   </div>
 
   <section v-if="isSettings && state.settings" class="card space-y-3">
-    <p>{{ msg('cert.settingsHelp') }}</p>
-    <a class="btn-outline" :href="settingsURL">{{ msg('cert.openConfigCenter') }}</a>
+    <p>{{ msg(settingsHelp) }}</p>
+    <a v-if="!state.settings.local" class="btn-outline" :href="settingsURL">{{
+      msg('cert.openConfigCenter')
+    }}</a>
     <dl class="space-y-2">
       <dt class="font-medium">{{ msg('cert.authority') }}</dt>
       <dd class="break-all">{{ state.settings.directory_url }}</dd>

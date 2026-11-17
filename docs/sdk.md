@@ -2,11 +2,43 @@
 
 CertCenter 使用 `github.com/OXeu/configcenter/sdk/configcenter`。仓库保留 SDK 独立模块，新增 `Put(ctx, key, value)`：先从 `/api/v1/agent/project` 获取 API key 绑定的项目，再调用现有配置写入 API。服务运行需要单项目 key 的 `projects:read`、`environments:read`、`config:read`、`config:write` 权限。
 
-本地仅配置 `CC_CONFIGCENTER_URL`、`CC_CONFIGCENTER_API_KEY`、`CC_CONFIGCENTER_ENVIRONMENT` 和可选的 `CC_ENV_FILE`；其他环境变量不作为 CertCenter 业务配置来源。
+本地仅配置 `CC_CONFIGCENTER_URL`、`CC_CONFIGCENTER_API_KEY`、`CC_CONFIGCENTER_ENVIRONMENT`、`CC_CONFIGCENTER_LOCAL_PATH` 和可选的 `CC_ENV_FILE`；其他环境变量不作为 CertCenter 业务配置来源。
+
+## 首次启动自动初始化
+
+每次启动通过 `EnsureDefaults` 检查配置，自动创建缺失的 `certcenter.server`、`certcenter.providers` 两个配置项。服务、数据库、OAuth、用户组和 ACME 等固定设置的默认值保存在这两个 JSON 中；DNS 和部署账号列表默认为空，不生成示例账号。既有配置项（包括空值或错误值）保持原样，避免替换管理员配置和加密密钥。
+
+远端使用 `POST /api/v1/projects/:project/environments/:env/defaults`，通过数据库事务和唯一键只插入不存在的项；本地通过 bbolt 事务完成同样的操作。多个实例同时初始化也不会覆盖彼此已写入的值。需要先更新并重启 ConfigCenter 服务端以提供此接口；缺少接口或写权限时会报出相关 key 和 HTTP 状态。
+
+例如缺失项读取错误会显示 `key "certcenter.server": configuration not found`；无效配置会显示 `validate key "certcenter.server": ...`，不输出配置值或凭据。初始化完成后仍需填写实际 OAuth、DNS 和部署凭据；默认不接受 ACME 条款，不自动执行云端操作。
+
+## 不配置远端：本地 KV 模式
+
+URL 和 API key 同时为空时，SDK 使用 [bbolt](https://github.com/etcd-io/bbolt)，默认文件是 `.tmp/certcenter-config.kv`，按环境隔离，文件权限为 `0600`。每次操作以事务完成并关闭文件；缺失配置在同一事务中初始化，已有值不会被默认值覆盖。CertCenter 首次启动生成并保存加密密钥，以后重启复用它。
+
+基础配置初始化后，使用同一 SDK 编辑 `certcenter.server`、`certcenter.providers` 等键。以下示例函数供调用方程序使用（程序应在项目根目录运行，或传入相同的绝对文件路径）：
+
+```go
+func saveLocalSettings(ctx context.Context, key, jsonValue string) error {
+    client, err := configcenter.New(configcenter.Config{
+        LocalPath: ".tmp/certcenter-config.kv",
+        Environment: "production",
+    })
+    if err != nil { return fmt.Errorf("create local settings client: %w", err) }
+    if err := client.Put(ctx, key, jsonValue); err != nil {
+        return fmt.Errorf("save local settings: %w", err)
+    }
+    return nil
+}
+```
+
+导入 `context`、`fmt` 和 `github.com/OXeu/configcenter/sdk/configcenter`。可先调用 `Load(ctx)` 和 `Get("certcenter.server")` 读取现有 JSON，再修改 OAuth 等字段，保留已有 `encryption_key`。初始没有 OAuth 登录、DNS 或云凭据；补齐后才能登录和签发。域名与策略的页面保存操作也通过同一 SDK 写入本地 KV。
+
+仅填写 URL 或 API key 会报错。远端已经配置时，服务错误不会触发本地兜底；`LocalPath` 和 `LocalDefaults` 被忽略。切换本地/远端不会自动迁移配置；迁移时必须保留加密密钥，且本地文件应与证书数据库一起备份。
 
 ## certcenter.server
 
-在 ConfigCenter 中创建此名称的配置项，值为 JSON：
+启动时自动创建此配置项；可在 ConfigCenter 中编辑。以下 JSON 展示可填写的字段：
 
 ```json
 {

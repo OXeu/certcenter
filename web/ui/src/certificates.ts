@@ -51,6 +51,7 @@ type DomainView = {
   delegations: { name: string; target: string }[]
 }
 type Settings = {
+  local: boolean
   configcenter_url: string
   dns_providers: string[]
   upstreams: string[]

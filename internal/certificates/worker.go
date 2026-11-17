@@ -24,7 +24,7 @@ func (s *Service) Run(ctx context.Context) {
 		}
 		if time.Now().After(nextSchedule) {
 			if err := s.Schedule(ctx, time.Now()); err != nil {
-				s.Log.Error("certificate scheduling failed")
+				s.Log.Error("certificate scheduling failed", "error", err)
 			}
 			nextSchedule = time.Now().Add(time.Minute)
 		}

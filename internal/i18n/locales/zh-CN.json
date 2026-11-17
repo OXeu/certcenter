@@ -191,11 +191,12 @@
   "cert.fingerprint": "SHA-256 指纹",
   "cert.emptyDomains": "暂无域名，请管理员添加域名。",
   "cert.emptyCertificates": "添加证书策略后即可开始签发。",
-  "cert.policyHelp": "策略保存于 ConfigCenter。新策略启用自动续签后将自动签发。云端部署上传至证书库；SSH 部署还会安装文件并可重载服务。",
+  "cert.policyHelp": "策略保存后生效。新策略启用自动续签后将自动签发。云端部署上传至证书库；SSH 部署还会安装文件并可重载服务。",
   "cert.delegation": "DNS 验证委派",
   "cert.delegationHelp": "签发前，在域名 DNS 中一次性添加以下 CNAME 记录。受委派的 acme-dns 服务须可从公网访问。",
   "cert.settingsHelp": "服务设置、ACME 注册信息、DNS 凭据和部署上游在 ConfigCenter 中配置。每次任务读取最新服务商配置；服务启动设置修改后需重启。此页面不返回私钥或凭据。",
   "cert.openConfigCenter": "打开 ConfigCenter",
   "cert.authority": "ACME 目录",
-  "cert.terms": "已接受 ACME 服务条款"
+  "cert.terms": "已接受 ACME 服务条款",
+  "cert.localSettingsHelp": "未配置远端 ConfigCenter，设置通过 SDK 保存在本地 bbolt KV 中。可使用 SDK 配置 OAuth、DNS 凭据和部署上游；修改服务启动设置后需重启。"
 }

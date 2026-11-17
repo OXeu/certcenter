@@ -44,12 +44,15 @@ func (r *Remote) RegistrationAllowed(ctx context.Context) (bool, error) {
 // NewRemote connects a ConfigCenter SDK client.
 func NewRemote(client *configcenter.Client) *Remote { return &Remote{client: client} }
 
+// IsLocal reports whether settings are persisted in the SDK's local fallback.
+func (r *Remote) IsLocal() bool { return r.client.IsLocal() }
+
 // Read fetches a JSON setting directly from ConfigCenter.
 func (r *Remote) Read(ctx context.Context, key string, out any) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if err := r.client.Load(ctx); err != nil {
-		return fmt.Errorf("load settings: %w", err)
+		return fmt.Errorf("load setting key %q: %w", key, err)
 	}
 	return r.decode(key, out)
 }
@@ -57,7 +60,7 @@ func (r *Remote) Read(ctx context.Context, key string, out any) error {
 func (r *Remote) decode(key string, out any) error {
 	raw, ok := r.client.Get(key)
 	if !ok {
-		return ErrMissing
+		return fmt.Errorf("key %q: %w", key, ErrMissing)
 	}
 	if err := json.Unmarshal([]byte(raw), out); err != nil {
 		return fmt.Errorf("invalid JSON in %s", key)
@@ -71,7 +74,10 @@ func (r *Remote) Providers(ctx context.Context) (Providers, error) {
 	if err := r.Read(ctx, "certcenter.providers", &p); err != nil {
 		return p, err
 	}
-	return p, p.Validate()
+	if err := p.Validate(); err != nil {
+		return p, fmt.Errorf("validate key %q: %w", "certcenter.providers", err)
+	}
+	return p, nil
 }
 
 // Domains returns all validated domain policies from one consistent SDK snapshot.
@@ -86,7 +92,7 @@ func (r *Remote) Domains(ctx context.Context) ([]Domain, error) {
 		return nil, err
 	}
 	if err := providers.Validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("validate key %q: %w", "certcenter.providers", err)
 	}
 	domains := []Domain{}
 	for _, item := range r.client.All() {
@@ -95,13 +101,13 @@ func (r *Remote) Domains(ctx context.Context) ([]Domain, error) {
 		}
 		var domain Domain
 		if err := json.Unmarshal([]byte(item.Value), &domain); err != nil {
-			return nil, errors.New("invalid domain JSON")
+			return nil, fmt.Errorf("invalid JSON in key %q", item.Key)
 		}
 		if item.Key != DomainKey(domain.Name) {
-			return nil, errors.New("domain key and name differ")
+			return nil, fmt.Errorf("key %q: domain name differs from key", item.Key)
 		}
 		if err := domain.Validate(providers); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("validate key %q: %w", item.Key, err)
 		}
 		domains = append(domains, domain)
 	}
@@ -112,13 +118,13 @@ func (r *Remote) Domains(ctx context.Context) ([]Domain, error) {
 func (r *Remote) Domain(ctx context.Context, name string) (Domain, error) {
 	var domain Domain
 	if !ValidDomain(name) {
-		return domain, ErrMissing
+		return domain, fmt.Errorf("domain key %q: %w", DomainKey(name), ErrMissing)
 	}
 	if err := r.Read(ctx, DomainKey(name), &domain); err != nil {
 		return domain, err
 	}
 	if domain.Name != name {
-		return domain, errors.New("domain key and name differ")
+		return domain, fmt.Errorf("key %q: domain name differs from key", DomainKey(name))
 	}
 	return domain, nil
 }
@@ -141,10 +147,10 @@ func (r *Remote) Write(ctx context.Context, key string, value any) error {
 	defer r.mu.Unlock()
 	raw, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("encode setting: %w", err)
+		return fmt.Errorf("encode setting key %q: %w", key, err)
 	}
 	if err := r.client.Put(ctx, key, string(raw)); err != nil {
-		return fmt.Errorf("save setting: %w", err)
+		return fmt.Errorf("save setting key %q: %w", key, err)
 	}
 	return nil
 }

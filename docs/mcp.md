@@ -1,6 +1,6 @@
 # CertCenter 自动化与运行
 
-首期通过常驻服务中的持久化任务队列实现自动签发、续期和上传。CertCenter 运行模式没有挂载原 ConfigCenter 的 MCP 配置操作入口。外部自动化可在 ConfigCenter 中维护域名策略，由 CertCenter 通过 SDK 读取执行。
+首期通过常驻服务中的持久化任务队列实现自动签发、续期和上传。CertCenter 运行模式没有挂载原 ConfigCenter 的 MCP 配置操作入口。外部自动化可通过 SDK 在远端 ConfigCenter 或本地 KV 中维护域名策略，由 CertCenter 通过同一 SDK 读取执行。
 
 ## 任务生命周期
 
@@ -27,6 +27,6 @@ ExecStart=/opt/certcenter/.tmp/bin/certcenter
 Restart=on-failure
 ```
 
-多工作进程共享同一数据库时使用租约抢占任务。ConfigCenter 的配置写入 API 没有 CAS；管理写入应由单个实例承接。每次操作读取最新远端配置；配置获取失败不使用过期凭据继续执行。
+多工作进程共享同一数据库时使用租约抢占任务。ConfigCenter 的配置写入 API 没有 CAS；管理写入应由单个实例承接。每次操作通过 SDK 读取当前存储中的最新配置；远端获取失败不会隐式转为本地存储。
 
-服务启动配置变更需要重启。DNS/provider、上游、域名策略和注册开关在使用时重新读取。加密密钥不可直接轮换，数据库恢复时必须配套同一密钥。
+服务启动配置变更需要重启。DNS/provider、上游、域名策略和注册开关在使用时通过 SDK 重新读取。加密密钥不可直接轮换，数据库恢复时必须配套同一密钥。
