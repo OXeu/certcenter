@@ -32,17 +32,17 @@ type ACMEAccount struct {
 
 // CertificateJob is a durable queue entry; ActiveKey prevents overlapping policy jobs.
 type CertificateJob struct {
-	Automatic  bool      `json:"automatic"`
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	Domain     string    `gorm:"index;size:253;not null" json:"domain"`
-	PolicyID   string    `gorm:"size:63;not null" json:"policy_id"`
-	Action     string    `gorm:"size:16;not null" json:"action"`
-	Status     string    `gorm:"index;size:16;not null" json:"status"`
-	ActiveKey  *string   `gorm:"uniqueIndex;size:64" json:"-"`
-	Worker     string    `gorm:"size:64" json:"-"`
-	LeaseUntil time.Time `json:"-"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	Automatic  bool       `json:"automatic"`
+	ID         uint       `gorm:"primaryKey" json:"id"`
+	Domain     string     `gorm:"index;size:253;not null" json:"domain"`
+	PolicyID   string     `gorm:"size:63;not null" json:"policy_id"`
+	Action     string     `gorm:"size:16;not null" json:"action"`
+	Status     string     `gorm:"index;size:16;not null" json:"status"`
+	ActiveKey  *string    `gorm:"uniqueIndex;size:64" json:"-"`
+	Worker     string     `gorm:"size:64" json:"-"`
+	LeaseUntil *time.Time `json:"-"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
 }
 
 // CertificateEvent is a credential-free issuance or deployment audit entry.
@@ -127,21 +127,22 @@ func (s *Store) ClaimCertificateJob(ctx context.Context, worker string, now time
 	if err != nil {
 		return job, queryErr("find queued operation", err)
 	}
+	lease := now.Add(20 * time.Minute)
 	result := s.db.WithContext(ctx).Model(&CertificateJob{}).Where("id = ? AND (status = ? OR (status = ? AND lease_until < ?))", job.ID, "queued", "running", now).
-		Updates(map[string]any{"status": "running", "worker": worker, "lease_until": now.Add(20 * time.Minute)})
+		Updates(map[string]any{"status": "running", "worker": worker, "lease_until": lease})
 	if result.Error != nil {
 		return job, queryErr("claim operation", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return job, ErrBusy
 	}
-	job.Status, job.Worker = "running", worker
+	job.Status, job.Worker, job.LeaseUntil = "running", worker, &lease
 	return job, nil
 }
 
 // FinishCertificateJob releases an operation lease and records its terminal state.
 func (s *Store) FinishCertificateJob(ctx context.Context, job CertificateJob, status string) error {
-	res := s.db.WithContext(ctx).Model(&CertificateJob{}).Where("id = ? AND worker = ? AND status = ?", job.ID, job.Worker, "running").Updates(map[string]any{"status": status, "active_key": nil})
+	res := s.db.WithContext(ctx).Model(&CertificateJob{}).Where("id = ? AND worker = ? AND status = ?", job.ID, job.Worker, "running").Updates(map[string]any{"status": status, "active_key": nil, "lease_until": nil})
 	return s.mustAffect(ctx, res, "finish operation")
 }
 
