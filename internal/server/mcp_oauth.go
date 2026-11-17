@@ -53,20 +53,6 @@ func oauthError(c *gin.Context, status int, code string) {
 	c.AbortWithStatusJSON(status, gin.H{"error": code})
 }
 
-func validRedirect(raw string) bool {
-	u, err := url.Parse(raw)
-	if err != nil || u.Hostname() == "" || u.User != nil || u.Fragment != "" || len(raw) > 2048 {
-		return false
-	}
-	if raw == "cursor://anysphere.cursor-mcp/oauth/callback" {
-		return true
-	}
-	if u.Scheme == "https" {
-		return true
-	}
-	return u.Scheme == "http" && (u.Hostname() == "127.0.0.1" || u.Hostname() == "::1" || u.Hostname() == "localhost")
-}
-
 func (s *Server) mcpRegister(c *gin.Context) {
 	var in struct {
 		Name          string   `json:"client_name"`
@@ -83,12 +69,6 @@ func (s *Server) mcpRegister(c *gin.Context) {
 	if len(in.Name) > 128 || len(in.RedirectURIs) == 0 || len(in.RedirectURIs) > 10 || (in.AuthMethod != "" && in.AuthMethod != "none") {
 		oauthError(c, 400, "invalid_client_metadata")
 		return
-	}
-	for _, uri := range in.RedirectURIs {
-		if !validRedirect(uri) {
-			oauthError(c, 400, "invalid_redirect_uri")
-			return
-		}
 	}
 	for _, grant := range in.GrantTypes {
 		if grant != "authorization_code" && grant != "refresh_token" {

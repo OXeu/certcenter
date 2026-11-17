@@ -127,15 +127,17 @@ it.each([
   'cursor://anysphere.cursor-mcp:1234/oauth/callback?code=issued',
   'cursor://user@anysphere.cursor-mcp/oauth/callback?code=issued',
   'cursor://:password@anysphere.cursor-mcp/oauth/callback?code=issued',
-])('rejects native callback substitution: %s', async (redirect) => {
+  'http://client.example/callback?code=issued',
+  '/oauth/client-callback?code=issued',
+  'my-app:oauth/callback?code=issued',
+])('follows the server-provided callback without URI checks: %s', async (redirect) => {
   fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ redirect })))
   const wrapper = cursorConsent()
   await wrapper.get('button.btn').trigger('click')
   await flushPromises()
   await wrapper.get('dialog form').trigger('submit')
   await flushPromises()
-  expect(location.assign).not.toHaveBeenCalled()
-  expect(notify).toHaveBeenCalledTimes(1)
-  expect(wrapper.get('dialog').element.open).toBe(true)
+  expect(location.assign).toHaveBeenCalledWith(redirect)
+  expect(notify).not.toHaveBeenCalled()
   wrapper.unmount()
 })

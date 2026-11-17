@@ -10,20 +10,26 @@ import (
 	"testing"
 )
 
-func TestMCPOAuthCursorRedirects(t *testing.T) {
+func TestMCPOAuthClientRedirects(t *testing.T) {
 	f, s := certificateFlows(t)
 	redirects := []string{
 		"cursor://anysphere.cursor-mcp/oauth/callback",
 		"https://www.cursor.com/agents/mcp/oauth/callback",
 		"http://localhost:8787/callback",
+		"http://client.example/callback",
+		"my-app://login/complete",
+		"cursor://another-app/other-command",
+		"my-app://login/complete?mode=oauth#done",
+		"/oauth/client-callback",
+		"my-app:oauth/callback",
 	}
 	status, registered := f.do(http.MethodPost, "/oauth/register", map[string]any{
-		"client_name": "Cursor", "redirect_uris": redirects,
+		"client_name": "MCP client", "redirect_uris": redirects,
 		"grant_types":    []string{"authorization_code", "refresh_token"},
 		"response_types": []string{"code"}, "token_endpoint_auth_method": "none",
 	})
 	if status != http.StatusCreated {
-		t.Fatalf("Cursor registration: %d %v", status, registered)
+		t.Fatalf("client registration: %d %v", status, registered)
 	}
 	clientID, ok := registered["client_id"].(string)
 	if !ok {
@@ -67,11 +73,16 @@ func TestMCPOAuthCursorRedirects(t *testing.T) {
 				t.Fatal(err)
 			}
 			query := target.Query()
-			target.RawQuery = ""
-			if target.String() != callback || query.Get("state") != "client-state" {
+			grant.Code = query.Get("code")
+			if query.Get("state") != "client-state" {
+				t.Fatal("consent changed the state")
+			}
+			query.Del("code")
+			query.Del("state")
+			target.RawQuery = query.Encode()
+			if target.String() != callback {
 				t.Fatal("consent changed the registered callback or state")
 			}
-			grant.Code = query.Get("code")
 			form := grant.exchangeForm()
 			form.Set("redirect_uri", "cursor://another-app/oauth/callback")
 			oauthPost(t, f.router, "/oauth/token", form, http.StatusBadRequest)
@@ -85,8 +96,8 @@ func TestMCPOAuthCursorRedirects(t *testing.T) {
 	}
 }
 
-func TestMCPOAuthRejectsUntrustedNativeRedirects(t *testing.T) {
-	f, _ := certificateFlows(t)
+func TestMCPOAuthRegistersCallbacksWithoutURIPolicy(t *testing.T) {
+	f, s := certificateFlows(t)
 	for _, callback := range []string{
 		"cursor://another-app/oauth/callback",
 		"cursor://anysphere.cursor-mcp/other-command",
@@ -98,11 +109,19 @@ func TestMCPOAuthRejectsUntrustedNativeRedirects(t *testing.T) {
 		"javascript://anysphere.cursor-mcp/oauth/callback",
 		"file://anysphere.cursor-mcp/oauth/callback",
 		"data://anysphere.cursor-mcp/oauth/callback",
+		"http://client.example/callback",
+		"relative/callback",
+		"not a URI",
+		strings.Repeat("x", 4096),
 	} {
 		t.Run(callback, func(t *testing.T) {
 			status, result := f.do(http.MethodPost, "/oauth/register", map[string]any{"redirect_uris": []string{callback}})
-			if status != http.StatusBadRequest || result["error"] != "invalid_redirect_uri" {
-				t.Fatal("untrusted callback accepted")
+			if status != http.StatusCreated {
+				t.Fatal("callback URI policy rejected registration")
+			}
+			client, err := s.store.OAuthClientByID(t.Context(), result["client_id"].(string))
+			if err != nil || !slices.Equal(client.RedirectURIs, []string{callback}) {
+				t.Fatal("registration did not preserve the supplied callback")
 			}
 		})
 	}

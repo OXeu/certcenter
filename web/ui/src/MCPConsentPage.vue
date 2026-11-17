@@ -21,17 +21,7 @@ async function decide(approve: boolean) {
       csrf: props.page.csrf,
       body: { request: consent.value.request, approve },
     })) as { redirect: string }
-    const target = new URL(result.redirect)
-    const expected = new URL(consent.value.redirectUri)
-    if (
-      target.protocol !== expected.protocol ||
-      target.host !== expected.host ||
-      target.pathname !== expected.pathname ||
-      target.username !== expected.username ||
-      target.password !== expected.password
-    )
-      throw new Error(msg('error.generic'))
-    location.assign(target.href)
+    location.assign(result.redirect)
   } catch (err) {
     busy.value = false
     throw err

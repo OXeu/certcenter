@@ -193,13 +193,8 @@ func TestMCPOAuthRefreshRevocationAndCurrentPermissions(t *testing.T) {
 	mcpRequest(t, f.router, grant.Access, nil, 401)
 }
 
-func TestMCPOAuthRejectsUntrustedRedirectsAndSessions(t *testing.T) {
+func TestMCPOAuthRejectsUnregisteredRedirectsAndSessions(t *testing.T) {
 	f, s := certificateFlows(t)
-	for _, uri := range []string{"https://client.example/cb#fragment", "http://client.example/cb", "javascript:alert(1)", "https://user:secret@client.example/cb", "//client.example/cb"} {
-		if status, _ := f.do(http.MethodPost, "/oauth/register", map[string]any{"redirect_uris": []string{uri}}); status != 400 {
-			t.Fatal("unsafe redirect", uri)
-		}
-	}
 	grant := oauthConsentRequest(t, f)
 	for _, change := range []struct{ key, value string }{{"redirect_uri", "https://evil.example/cb"}, {"code_challenge_method", "plain"}, {"resource", "https://evil.example/mcp"}, {"scope", "admin"}} {
 		u, _ := url.Parse(grant.authorizeURL())
