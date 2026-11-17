@@ -209,7 +209,7 @@ func (s *Server) render(c *gin.Context, status int, data gin.H) {
 		"messages": s.catalog.Messages(s.translator(c).Lang()), "flash": nil,
 		"certcenter": s.cfg.Remote != nil, "domain": withCommon["Domain"],
 	}
-	for _, key := range []string{"Page", "Env", "CanWrite", "DocPage", "Consent"} {
+	for _, key := range []string{"Page", "Env", "CanWrite", "Consent"} {
 		if value, ok := withCommon[key]; ok {
 			payload[strings.ToLower(key[:1])+key[1:]] = value
 		}
@@ -262,10 +262,6 @@ func (s *Server) router() *gin.Engine {
 	}
 	r.GET("/static/*filepath", func(c *gin.Context) {
 		c.Header("Cache-Control", "public, max-age=3600")
-		if c.Param("filepath") == "/docs/shiki.css" {
-			serveDocStyles(c)
-			return
-		}
 		if strings.HasPrefix(c.Param("filepath"), "/brand/") {
 			http.StripPrefix("/static/brand/", http.FileServer(http.FS(brand))).ServeHTTP(c.Writer, c.Request)
 			return
@@ -288,7 +284,6 @@ func (s *Server) router() *gin.Engine {
 	r.Use(s.authenticator.BrowserMiddleware())
 	r.Use(s.languageMiddleware())
 
-	s.mountDocs(r)
 	s.MountOAuth(r)
 	s.MountLanguage(r)
 	if s.cfg.Remote != nil {

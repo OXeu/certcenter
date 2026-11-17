@@ -15,4 +15,3 @@ async function compressDirectory(directory: string): Promise<void> {
 }
 
 await compressDirectory('.tmp/ui')
-await compressDirectory('.tmp/docs')

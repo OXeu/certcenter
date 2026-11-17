@@ -88,7 +88,6 @@ async function logout() {
       }}</a>
       <a v-if="manageProviders" class="btn-ghost" href="/upstreams">{{ msg('cert.upstreams') }}</a>
       <a v-if="data.isAdmin" class="btn-ghost" href="/settings">{{ msg('title.settings') }}</a>
-      <a class="btn-ghost" href="/docs/">{{ msg('nav.docs') }}</a>
     </nav>
     <button
       class="btn-ghost btn-icon"

@@ -16,7 +16,6 @@ export type PageData = {
     | 'users'
     | 'settings'
     | 'keys'
-    | 'docs'
     | 'domains'
     | 'certificates'
     | 'certificate-settings'
@@ -25,7 +24,6 @@ export type PageData = {
   consent?: { request: string; client: string; redirectUri: string; resource: string }
   certcenter?: boolean
   domain?: string
-  docPage?: string
   lang: string
   title: string
   publicUrl: string
@@ -53,7 +51,6 @@ export const pages = [
   'users',
   'settings',
   'keys',
-  'docs',
   'domains',
   'certificates',
   'certificate-settings',

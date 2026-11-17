@@ -40,7 +40,7 @@ export default defineConfig(({ command }) => ({
       perf: 'warn',
     },
     env: { browser: true, es2024: true },
-    ignorePatterns: ['internal/server/static/**', 'sdk/**', 'node_modules/**'],
+    ignorePatterns: ['internal/server/static/**', 'node_modules/**'],
     jsPlugins: ['vite-plus/oxlint-plugin', './tools/oxlint/configcenter.ts'],
 
     rules: {
@@ -58,7 +58,7 @@ export default defineConfig(({ command }) => ({
     },
   },
   fmt: {
-    ignorePatterns: ['internal/server/static/**', 'sdk/**'],
+    ignorePatterns: ['internal/server/static/**'],
     semi: false,
     singleQuote: true,
   },

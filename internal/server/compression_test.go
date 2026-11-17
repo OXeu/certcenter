@@ -3,10 +3,13 @@ package server
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/OXeu/certcenter"
 )
 
 func TestAcceptsGzip(t *testing.T) {
@@ -32,7 +35,7 @@ func TestAcceptsGzip(t *testing.T) {
 
 func TestStaticCompression(t *testing.T) {
 	_, router, _ := testServer(t, false)
-	url := "/static/docs/shiki.css"
+	url := frontendCSS(t)
 	plain := httptest.NewRecorder()
 	router.ServeHTTP(plain, httptest.NewRequest(http.MethodGet, url, http.NoBody))
 	for _, encoding := range []string{"gzip", "gzip;q=0", "br", "*"} {
@@ -86,7 +89,7 @@ func TestStaticCompression(t *testing.T) {
 
 func TestStaticSkipsSessionMiddleware(t *testing.T) {
 	_, router, _ := testServer(t, false)
-	for _, url := range []string{"/static/docs/shiki.css", "/static/brand/icon-512.webp", "/login"} {
+	for _, url := range []string{frontendCSS(t), "/static/brand/icon-512.webp", "/login"} {
 		request := httptest.NewRequest(http.MethodGet, url, http.NoBody)
 		request.AddCookie(&http.Cookie{Name: "cc_session", Value: "invalid-session"})
 		response := httptest.NewRecorder()
@@ -96,4 +99,17 @@ func TestStaticSkipsSessionMiddleware(t *testing.T) {
 			t.Fatalf("%s session cookie cleared = %v", url, cleared)
 		}
 	}
+}
+
+func frontendCSS(t *testing.T) string {
+	t.Helper()
+	raw, err := certcenter.Frontend.ReadFile(".tmp/ui/.vite/manifest.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest map[string]struct{ CSS []string }
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	return "/static/app/" + manifest["web/ui/src/main.ts"].CSS[0]
 }

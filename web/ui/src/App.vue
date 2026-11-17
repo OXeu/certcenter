@@ -16,22 +16,12 @@ const props = defineProps({ data: { type: Object, required: true } })
 const data = /** @type {import('./data.ts').PageData} */ (props.data)
 const { theme, toggleTheme } = useTheme()
 watch(theme, (value) => setToastTheme(value))
-const isDocs = computed(() => data.page === 'docs')
 const isCertificatePage = computed(() => ['domains', 'certificates'].includes(data.page))
 const isSettingsPage = computed(() => data.page === 'certificate-settings')
 const isProviderPage = computed(() => ['dns-providers', 'upstreams'].includes(data.page))
 const isWorkspace = computed(() =>
   ['projects', 'project', 'users', 'settings', 'keys'].includes(data.page),
 )
-const docsLinks = [
-  { page: 'index', href: '/docs/', label: 'docs.overview' },
-  { page: 'config', href: '/docs/config', label: 'docs.config' },
-  { page: 'operations', href: '/docs/operations', label: 'docs.operations' },
-  { page: 'api', href: '/docs/api', label: 'docs.api' },
-  { page: 'sdk', href: '/docs/sdk', label: 'docs.sdk' },
-  { page: 'mcp', href: '/docs/mcp', label: 'docs.mcp' },
-]
-const rawDocument = computed(() => `/docs/${data.docPage ?? 'index'}.md`)
 const page = createPage(data)
 const { msg } = page
 const title = computed(
@@ -44,18 +34,13 @@ onMounted(() => {
 })
 </script>
 <template>
-  <div
-    :data-theme="theme"
-    class="bg-background text-foreground"
-    :class="{ 'min-h-screen': !isDocs }"
-  >
+  <div :data-theme="theme" class="min-h-screen bg-background text-foreground">
     <ToastViewport />
     <PageHeader
       :data="data"
       :msg="msg"
       :title="title"
       :theme="theme"
-      :header-only="isDocs"
       subtitle=""
       @toggle-theme="toggleTheme"
     >
@@ -68,21 +53,5 @@ onMounted(() => {
       <CertificateSettingsPage v-if="isSettingsPage" :page="page" />
       <ProviderPage v-if="isProviderPage" :data="data" :page="page" />
     </PageHeader>
-    <nav
-      v-if="isDocs"
-      class="mx-auto flex max-w-6xl flex-wrap gap-2 px-4 py-4 sm:px-6 sm:py-6"
-      :aria-label="msg('docs.navigation')"
-    >
-      <a
-        v-for="link in docsLinks"
-        :key="link.page"
-        :href="link.href"
-        class="tabs-trigger inline-flex items-center"
-        :data-active="data.docPage === link.page"
-        :aria-current="data.docPage === link.page ? 'page' : undefined"
-        >{{ msg(link.label) }}</a
-      >
-      <a class="btn-ghost ml-auto" :href="rawDocument">{{ msg('docs.raw') }}</a>
-    </nav>
   </div>
 </template>

@@ -8,9 +8,8 @@ import type { PageData } from '../src/data.ts'
 vi.mock('../src/toast.ts', () => ({ notify: vi.fn() }))
 
 const data: PageData = {
-  page: 'docs',
-  docPage: 'api',
-  title: 'nav.docs',
+  page: 'login',
+  title: 'login.title',
   lang: 'en',
   publicUrl: '',
   providerName: '',
@@ -46,7 +45,7 @@ function header(lang = 'en') {
     props: {
       data: { ...data, lang },
       msg: createCopy(lang).msg,
-      title: 'Documentation',
+      title: 'Sign in',
       subtitle: '',
       theme: 'light',
       headerOnly: true,

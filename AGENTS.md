@@ -4,22 +4,22 @@ Rules for anyone (human or model) changing certcenter. They are enforced where a
 
 ## Layout
 
-- `cmd/certcenter` — main, flags-free, environment driven. `internal/config` loads `.env.local` (or `CC_ENV_FILE`) for ConfigCenter connection bootstrap, then reads settings through the SDK; exported bootstrap variables are never overridden. Never print secret values.
+- `cmd/certcenter` — main, flags-free, environment driven. `internal/config` loads `.env.local` (or `CC_ENV_FILE`) for ConfigCenter connection bootstrap, then reads settings through the internal ConfigCenter client; exported bootstrap variables are never overridden. Never print secret values.
 - `internal/config` — loads the env file and reads every environment variable here and nowhere else.
 - `internal/store` — gorm models and all queries; one `Store` method per query. Certificate material and ACME keys are encrypted in the database.
-- `internal/certconfig` — ConfigCenter SDK settings, domain policies and provider credentials; the SDK uses local bbolt KV when no remote connection is configured.
+- `internal/certconfig` — ConfigCenter settings, domain policies and provider credentials; the internal client uses local bbolt KV when no remote connection is configured.
 - `internal/certificates` — ACME issuance, persistent jobs, renewal scheduling and deployment coordination.
 - `internal/dnsprovider` / `internal/upstream` — DNS validation and certificate deployment adapters.
 - `internal/auth` — sessions, roles, CSRF, API-key and agent middleware, OAuth provider adapter.
 - `internal/oauth` — the RFC 6749 + OIDC client (discovery, PKCE, id_token verification, userinfo fallback).
 - `internal/server` — gin router, REST handlers, MCP endpoint, Go templates (`templates/shell/vue.html`), embedded static files.
 - `web/ui` — Vue 3 single-file components and Tailwind CSS; Vite Plus builds into `.tmp/ui`, embedded by root `assets.go`.
-- `sdk/configcenter` — separate module with the public Go client.
-- `docs/commits.md` — the commit message rules (Conventional Commits 1.0.0 plus this repository's constraints).
+- `internal/configcenter` — internal ConfigCenter transport and local KV adapter.
+- `.github/commits.md` — the commit message rules (Conventional Commits 1.0.0 plus this repository's constraints).
 
 ## Commits
 
-Commit messages follow [`docs/commits.md`](docs/commits.md): Conventional Commits 1.0.0 with the repository's own constraints. When asked to commit, split the work into one commit per functional change and keep committing until `git status` is clean — never commit only the part of the working tree you touched. The full procedure is in that document; do not restate or shorten it here.
+Commit messages follow [`.github/commits.md`](.github/commits.md): Conventional Commits 1.0.0 with the repository's own constraints. When asked to commit, split the work into one commit per functional change and keep committing until `git status` is clean — never commit only the part of the working tree you touched. The full procedure is in that document; do not restate or shorten it here.
 
 ## Files created while working
 
@@ -64,19 +64,18 @@ Commit messages follow [`docs/commits.md`](docs/commits.md): Conventional Commit
 8. **Translations.** Components use `msg(id, vars)` from `web/ui/src/i18n.ts`. Both English and Chinese catalogs in `internal/i18n/locales` contain every ID; the same catalogs supply frontend fallbacks and Go page messages. Keep `/language?lang=` and the header language menu. Do not retranslate server flash text.
 9. **Icons.** Use Remix Icon classes with `aria-hidden="true"`. No SVG markup or emoji in templates. The favicon and vendored icon font remain static assets.
 10. **Types and formatting.** TypeScript modules use native type annotations. `npm run typecheck` runs TypeScript 7 for modules, tools and non-component tests, and vue-tsc with its TypeScript 6 compatibility dependency for Vue templates and component tests. Cast untyped API payloads explicitly at boundaries. Vite Plus provides Oxlint, Oxfmt, Vitest and the production build. `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` must pass.
-11. **Artifacts.** Vite outputs only `.tmp/ui`; Shiki and Markdown rendering output `.tmp/docs`. Go embeds both directories. Run `make assets` before direct Go tooling after a clean checkout. `make test`, `make lint`, `make check` and `make build` prepare it automatically. Keep `.tmp/ui` and `.tmp/docs` for subsequent builds; binaries belong in `.tmp/bin`. No generated bundles are committed.
+11. **Artifacts.** Vite outputs only `.tmp/ui`; Go embeds the frontend directory. Run `make assets` before direct Go tooling after a clean checkout. `make test`, `make lint`, `make check` and `make build` prepare it automatically. Keep `.tmp/ui` for subsequent builds; binaries belong in `.tmp/bin`. No generated bundles are committed.
 
 ## Testing
 
 - `go test ./...` — OAuth login through a fake identity provider, project isolation, CSRF.
-- `go test ./...` in `sdk/configcenter`; the live test runs only with `CC_TEST_URL` and `CC_TEST_KEY`.
 - `npm test` — Vitest and Vue Test Utils with jsdom cover dialogs, requests, permissions, translations, toast setup and template rules.
 - `internal/server/e2e_test.go` renders every page, logs in through a fake IdP and proves a key of one project cannot reach another. Its `TestMain` (`scratch_test.go`) points `TMPDIR` at `.tmp/go-test` so `go test` run directly, without `make`, also keeps its scratch files in the workspace.
-- Relational test databases use `mode=memory`. SDK local KV tests use isolated bbolt files under the repository root `.tmp/` and clean them up; no database is written into a package directory.
+- Relational test databases use `mode=memory`. Internal configuration KV tests use isolated bbolt files under the repository root `.tmp/` and clean them up; no database is written into a package directory.
 
 ## Definition of done
 
-`make check` passes: Vite Plus production build, Go lint and tests, Oxlint, strict Vue type checks, Vitest, and SDK lint and tests. `make build` produces `.tmp/bin/certcenter`. Commit working changes according to `docs/commits.md` and finish with a clean `git status`. Build artifacts remain ignored under `.tmp/`.
+`make check` passes: Vite Plus production build, Go lint and tests, Oxlint, strict Vue type checks, Vitest, and internal configuration client tests. `make build` produces `.tmp/bin/certcenter`. Commit working changes according to `.github/commits.md` and finish with a clean `git status`. Build artifacts remain ignored under `.tmp/`.
 
 ## Dangerous UI actions
 

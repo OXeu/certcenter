@@ -210,10 +210,10 @@ describe('Vue pages', () => {
     ['en', 'Users', 'API keys', 'Admin'],
     ['zh-CN', '用户管理', '密钥', '管理员'],
   ])(
-    'puts localized admin navigation in the docs account menu for %s',
+    'puts localized admin navigation in the account menu for %s',
     async (lang, users, keys, role) => {
       const wrapper = mount(App, {
-        props: { data: { ...data, page: 'docs', docPage: 'api', lang } },
+        props: { data: { ...data, page: 'login', lang } },
         attachTo: document.body,
       })
       const header = wrapper.get('header')
@@ -233,39 +233,6 @@ describe('Vue pages', () => {
       wrapper.unmount()
     },
   )
-  it('uses the shared header and saved theme on public docs without workspace requests', async () => {
-    localStorage.setItem('cc_theme', 'dark')
-    vi.mocked(notify).mockClear()
-    const wrapper = mount(App, {
-      props: {
-        data: {
-          ...data,
-          page: 'docs',
-          docPage: 'api',
-          title: 'nav.docs',
-          loggedIn: false,
-          isAdmin: false,
-          canWrite: false,
-          me: null,
-        },
-      },
-    })
-    await vi.dynamicImportSettled()
-    await flushPromises()
-    expect(fetch).not.toHaveBeenCalled()
-    expect(notify).not.toHaveBeenCalled()
-    expect(wrapper.attributes('data-theme')).toBe('dark')
-    expect(wrapper.get('header img').attributes('src')).toBe('/static/brand/icon-32.webp')
-    expect(wrapper.get('a[href="/docs/api"]').attributes('aria-current')).toBe('page')
-    expect(wrapper.find('a[href="/docs/api.md"]').exists()).toBe(true)
-    expect(wrapper.get('a[href="/docs/mcp"]').text()).toBe('MCP')
-    expect(wrapper.find('main').exists()).toBe(false)
-    expect(wrapper.find('dialog').exists()).toBe(false)
-    expect(wrapper.classes()).not.toContain('min-h-screen')
-    await wrapper.get('button[aria-label="Light mode"]').trigger('click')
-    expect(localStorage.getItem('cc_theme')).toBe('light')
-    wrapper.unmount()
-  })
   it('blocks repeated submit and escape while saving', async () => {
     const form = createForm(createPage(data))
     let finish!: () => void
