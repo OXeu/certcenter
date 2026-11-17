@@ -50,7 +50,7 @@ it('requires confirmation and submits a CSRF-bound consent exactly once while bu
   expect(wrapper.text()).toContain('Test client')
   expect(wrapper.text()).toContain('https://client.example/callback')
   expect(fetchMock).not.toHaveBeenCalled()
-  await wrapper.get('button.btn').trigger('click')
+  await wrapper.get('button.btn-primary').trigger('click')
   await flushPromises()
   expect(wrapper.get('dialog').element.open).toBe(true)
   await wrapper.get('dialog form').trigger('submit')
@@ -77,7 +77,7 @@ it('allows denial and displays failures only as toasts', async () => {
     new Response(JSON.stringify({ error: 'invalid_request' }), { status: 400 }),
   )
   const wrapper = mount(MCPConsentPage, { props: { data, page: createPage(data) } })
-  await wrapper.get('button.btn-outline').trigger('click')
+  await wrapper.get('button.btn-secondary').trigger('click')
   await flushPromises()
   expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
     request: 'pending',
@@ -86,7 +86,7 @@ it('allows denial and displays failures only as toasts', async () => {
   expect(notify).toHaveBeenCalled()
   expect(wrapper.text()).not.toContain('invalid_request')
   expect(location.assign).not.toHaveBeenCalled()
-  expect(wrapper.get('button.btn-outline').attributes('disabled')).toBeUndefined()
+  expect(wrapper.get('button.btn-secondary').attributes('disabled')).toBeUndefined()
   wrapper.unmount()
 })
 
@@ -108,11 +108,11 @@ it.each([true, false])('returns a Cursor consent decision: approve=%s', async (a
   fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ redirect })))
   const wrapper = cursorConsent()
   if (approve) {
-    await wrapper.get('button.btn').trigger('click')
+    await wrapper.get('button.btn-primary').trigger('click')
     await flushPromises()
     await wrapper.get('dialog form').trigger('submit')
   } else {
-    await wrapper.get('button.btn-outline').trigger('click')
+    await wrapper.get('button.btn-secondary').trigger('click')
   }
   await flushPromises()
   expect(location.assign).toHaveBeenCalledWith(redirect)
@@ -133,7 +133,7 @@ it.each([
 ])('follows the server-provided callback without URI checks: %s', async (redirect) => {
   fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ redirect })))
   const wrapper = cursorConsent()
-  await wrapper.get('button.btn').trigger('click')
+  await wrapper.get('button.btn-primary').trigger('click')
   await flushPromises()
   await wrapper.get('dialog form').trigger('submit')
   await flushPromises()

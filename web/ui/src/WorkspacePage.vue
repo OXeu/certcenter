@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Button from '@oxeu/center-common/ui/Button.vue'
 import NavigationLink from '@oxeu/center-common/ui/NavigationLink.vue'
 import { computed, defineAsyncComponent, onMounted } from 'vue'
 import DangerActions from './DangerActions.vue'
@@ -84,37 +85,38 @@ onMounted(refresh)
   </p>
   <div class="flex flex-wrap gap-2 my-4">
     <template v-if="data.page === 'project'">
-      <button
+      <Button
         v-for="tab in ['items', 'keys', 'proposals']"
         :key="tab"
-        class="tabs-trigger"
         :data-active="state.tab === tab"
         :disabled="state.busy"
         @click="select(tab)"
+        variant="ghost"
+        size="sm"
       >
         {{ msg(`projects.${tab}`) }}
-      </button>
-      <button class="btn-outline" :disabled="state.busy" @click="environment">
+      </Button>
+      <Button :disabled="state.busy" @click="environment" variant="secondary">
         {{ msg('projects.environment') }}: {{ state.env }}
-      </button>
-      <button
+      </Button>
+      <Button
         v-if="data.canWrite"
-        class="btn-outline"
         :disabled="state.busy"
         @click="newEnvironment"
+        variant="secondary"
       >
         {{ msg('common.newEnvironment') }}
-      </button>
+      </Button>
     </template>
-    <button v-if="showViewSwitch" class="btn-outline" :disabled="state.busy" @click="toggleView">
+    <Button v-if="showViewSwitch" :disabled="state.busy" @click="toggleView" variant="secondary">
       {{ viewLabel }}
-    </button>
-    <button class="btn-outline" :disabled="state.busy" @click="refresh">
+    </Button>
+    <Button :disabled="state.busy" @click="refresh" variant="secondary">
       {{ msg('common.refresh') }}
-    </button>
-    <button v-if="canCreate" class="btn" :disabled="state.busy" @click="edit()">
+    </Button>
+    <Button v-if="canCreate" :disabled="state.busy" @click="edit()" variant="primary">
       {{ msg('common.create') }}
-    </button>
+    </Button>
   </div>
   <div class="table-scroll">
     <table class="table" :aria-label="title" :aria-busy="state.busy">
@@ -139,9 +141,9 @@ onMounted(refresh)
             <span v-else class="whitespace-pre-wrap break-all">{{ cell(row, column) }}</span>
           </td>
           <td v-if="data.canWrite || data.isAdmin" :data-label="msg('common.actions')">
-            <button v-if="!reviewing" class="btn-ghost" :disabled="state.busy" @click="edit(row)">
+            <Button v-if="!reviewing" :disabled="state.busy" @click="edit(row)" variant="ghost">
               {{ msg('common.edit') }}
-            </button>
+            </Button>
             <DangerActions
               v-if="data.page !== 'settings'"
               :actions="actionsFor(row)"

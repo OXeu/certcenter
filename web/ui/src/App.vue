@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Button from '@oxeu/center-common/ui/Button.vue'
 import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import PageHeader from './PageHeader.vue'
 import ToastViewport from './ToastViewport.vue'
@@ -44,9 +45,13 @@ onMounted(() => {
       subtitle=""
       @toggle-theme="toggleTheme"
     >
-      <a v-if="data.page === 'login' && data.oauthEnabled" class="btn mt-4" href="/auth/login">{{
-        msg('login.continue', { ProviderName: data.providerName })
-      }}</a>
+      <Button
+        class="mt-4"
+        v-if="data.page === 'login' && data.oauthEnabled"
+        href="/auth/login"
+        variant="primary"
+        >{{ msg('login.continue', { ProviderName: data.providerName }) }}</Button
+      >
       <MCPConsentPage v-if="data.page === 'mcp-consent'" :data="data" :page="page" />
       <WorkspacePage v-if="isWorkspace" :data="data" :page="page" :title="title" />
       <CertificatePage v-if="isCertificatePage" :data="data" :page="page" />

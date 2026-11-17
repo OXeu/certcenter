@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Button from '@oxeu/center-common/ui/Button.vue'
 import { computed, ref, watch, nextTick, useId, onBeforeUnmount } from 'vue'
 import { toastTarget } from './toast-host.ts'
 import DropdownSelect from '@oxeu/center-common/ui/DropdownSelect.vue'
@@ -130,15 +131,16 @@ function cancel(event: Event) {
                 :disabled="form.busy"
                 required
               />
-              <button
+              <Button
                 type="button"
-                class="btn-outline btn-icon"
                 :aria-label="msg('keys.excludeScope')"
                 :disabled="form.busy"
                 @click="form.excludeScope(scope.id)"
+                variant="secondary"
+                content="icon"
+                icon="ri-close-line"
               >
-                <i class="ri-close-line" aria-hidden="true"></i>
-              </button>
+              </Button>
             </div>
             <div class="grid gap-1 sm:grid-cols-2">
               <CheckboxField
@@ -151,32 +153,32 @@ function cancel(event: Event) {
               />
             </div>
           </fieldset>
-          <button
+          <Button
             v-if="canAddScope"
             type="button"
-            class="btn-outline"
             :disabled="form.busy"
-            @click="form.addScope"
+            @click="form.addScope()"
+            variant="secondary"
           >
             {{ msg('keys.addScope') }}
-          </button>
+          </Button>
         </section>
       </template>
       <p v-if="form.token" class="field">
         {{ msg('projects.tokenIssued') }}<code class="break-all">{{ form.token }}</code>
       </p>
       <div class="flex flex-wrap justify-end gap-2">
-        <button class="btn-ghost" type="button" :disabled="form.busy" @click="form.open = false">
+        <Button type="button" :disabled="form.busy" @click="form.open = false" variant="ghost">
           {{ msg('common.cancel') }}
-        </button>
-        <button
+        </Button>
+        <Button
           v-if="!form.token"
-          :class="form.danger ? 'btn-danger' : 'btn'"
+          :variant="form.danger ? 'danger' : 'primary'"
           type="submit"
           :disabled="form.busy"
         >
           {{ msg('confirm.ok') }}
-        </button>
+        </Button>
       </div>
     </form>
   </dialog>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Button from '@oxeu/center-common/ui/Button.vue'
 import NavigationLink from '@oxeu/center-common/ui/NavigationLink.vue'
 import { computed, onMounted, onUnmounted } from 'vue'
 import DialogPanel from './DialogPanel.vue'
@@ -50,15 +51,15 @@ onUnmounted(() => {
 
 <template>
   <div class="my-4 flex flex-wrap gap-2">
-    <button class="btn-outline" :disabled="state.busy" @click="refresh">
+    <Button :disabled="state.busy" @click="refresh" variant="secondary">
       {{ msg('common.refresh') }}
-    </button>
-    <button v-if="canCreate" class="btn" :disabled="state.busy" @click="createDomain">
+    </Button>
+    <Button v-if="canCreate" :disabled="state.busy" @click="createDomain" variant="primary">
       {{ msg('cert.addDomain') }}
-    </button>
-    <button v-if="state.detail" class="btn" :disabled="state.busy" @click="editPolicy()">
+    </Button>
+    <Button v-if="state.detail" :disabled="state.busy" @click="editPolicy()" variant="primary">
       {{ msg('cert.addCertificate') }}
-    </button>
+    </Button>
   </div>
 
   <div v-if="isDomains" class="table-scroll">
@@ -85,15 +86,16 @@ onUnmounted(() => {
 
   <template v-if="state.detail">
     <nav class="mb-4 flex gap-2" :aria-label="msg('cert.certificates')">
-      <button
+      <Button
         v-for="tab in tabs"
         :key="tab"
-        class="tabs-trigger"
         :data-active="state.tab === tab"
         @click="state.tab = tab"
+        variant="ghost"
+        size="sm"
       >
         {{ msg(`cert.${tab}`) }}
-      </button>
+      </Button>
     </nav>
     <div v-if="state.tab === 'policies'" class="space-y-4">
       <p class="text-sm text-muted-foreground">{{ msg('cert.policyHelp') }}</p>
@@ -128,9 +130,9 @@ onUnmounted(() => {
                 <p>{{ msg('cert.autoDeploy') }}: {{ yes(policy.auto_deploy) }}</p>
               </td>
               <td>
-                <button class="btn-ghost" :disabled="state.busy" @click="editPolicy(policy)">
+                <Button :disabled="state.busy" @click="editPolicy(policy)" variant="ghost">
                   {{ msg('common.edit') }}
-                </button>
+                </Button>
                 <DangerActions
                   :actions="actionsFor(policy)"
                   :label="msg('common.more')"
@@ -155,9 +157,9 @@ onUnmounted(() => {
           {{ record.name }} CNAME {{ record.target }}
           <span class="badge">{{ delegationStatus(record) }}</span>
         </p>
-        <button class="btn-outline" :disabled="state.checking" @click="checkDelegations">
+        <Button :disabled="state.checking" @click="checkDelegations" variant="secondary">
           {{ msg('cert.checkDelegation') }}
-        </button>
+        </Button>
       </section>
     </div>
 

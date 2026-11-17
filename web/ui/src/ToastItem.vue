@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Button from '@oxeu/center-common/ui/Button.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { bindToast, toast } from '@yusufceng1z/ding'
 
@@ -40,16 +41,19 @@ function dismiss() {
           </div>
           <div v-if="item.description" class="tst-desc">{{ item.description }}</div>
         </div>
-        <button
+        <Button
           v-if="sticky"
-          class="tst-close btn-ghost btn-icon"
           type="button"
           :aria-label="dismissLabel"
           :tabindex="tabindex"
           @click="dismiss"
+          variant="ghost"
+          size="sm"
+          data-toast-dismiss
+          content="icon"
+          icon="ri-close-line"
         >
-          <i class="ri-close-line" aria-hidden="true"></i>
-        </button>
+        </Button>
       </div>
     </div>
   </div>

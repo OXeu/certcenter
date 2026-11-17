@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Button from '@oxeu/center-common/ui/Button.vue'
 import { computed, ref } from 'vue'
 import { api } from './core.ts'
 import { createForm } from './forms.ts'
@@ -50,12 +51,12 @@ async function deny() {
       <dd>{{ consent.redirectUri }}</dd>
     </dl>
     <div class="flex gap-2">
-      <button class="btn" type="button" :disabled="busy" @click="authorize">
+      <Button type="button" :disabled="busy" @click="authorize" variant="primary">
         {{ msg('mcp.authorize') }}
-      </button>
-      <button class="btn-outline" type="button" :disabled="busy" @click="deny">
+      </Button>
+      <Button type="button" :disabled="busy" @click="deny" variant="secondary">
         {{ msg('mcp.deny') }}
-      </button>
+      </Button>
     </div>
   </section>
   <DialogPanel v-if="form.open" :form="form" :msg="msg" />

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Button from '@oxeu/center-common/ui/Button.vue'
 import { computed, onMounted } from 'vue'
 import DialogPanel from './DialogPanel.vue'
 import { createSettingsWorkspace } from './workspace.ts'
@@ -18,9 +19,9 @@ onMounted(refresh)
 </script>
 <template>
   <div class="my-4 flex flex-wrap items-center gap-3">
-    <button class="btn-outline" :disabled="state.busy" @click="refresh">
+    <Button :disabled="state.busy" @click="refresh" variant="secondary">
       {{ msg('common.refresh') }}
-    </button>
+    </Button>
     <span v-if="state.settings" class="badge">{{ activation }}</span>
   </div>
   <p class="mb-4 text-sm text-muted-foreground">{{ msg('settings.help') }}</p>
@@ -33,9 +34,9 @@ onMounted(refresh)
     >
       <div class="flex items-center justify-between gap-3">
         <h2 class="font-medium">{{ msg(`settings.${section}`) }}</h2>
-        <button class="btn-outline" :disabled="unavailable" @click="edit(section)">
+        <Button :disabled="unavailable" @click="edit(section)" variant="secondary">
           {{ msg('common.edit') }}
-        </button>
+        </Button>
       </div>
       <p class="text-sm text-muted-foreground">{{ msg(`settings.${section}Help`) }}</p>
       <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-2">

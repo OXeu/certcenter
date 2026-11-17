@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Button from '@oxeu/center-common/ui/Button.vue'
 import { computed, onMounted } from 'vue'
 import DialogPanel from './DialogPanel.vue'
 import DangerActions from './DangerActions.vue'
@@ -19,10 +20,10 @@ onMounted(refresh)
 </script>
 <template>
   <div class="my-4 flex flex-wrap gap-2">
-    <button class="btn-outline" :disabled="state.busy" @click="refresh">
+    <Button :disabled="state.busy" @click="refresh" variant="secondary">
       {{ msg('common.refresh') }}
-    </button>
-    <button class="btn" :disabled="unavailable" @click="edit()">{{ addLabel }}</button>
+    </Button>
+    <Button :disabled="unavailable" @click="edit()" variant="primary">{{ addLabel }}</Button>
   </div>
   <p class="mb-4 text-sm text-muted-foreground">{{ msg('providers.help') }}</p>
   <p v-if="isDNS" class="mb-4 text-sm text-muted-foreground">{{ msg('providers.managedHelp') }}</p>
@@ -40,14 +41,14 @@ onMounted(refresh)
           <td>{{ provider.name }}</td>
           <td>{{ msg(`providers.${provider.fields.kind}`) }}</td>
           <td>
-            <button
+            <Button
               v-if="editable(provider)"
-              class="btn-ghost"
               :disabled="state.busy"
               @click="edit(provider)"
+              variant="ghost"
             >
               {{ msg('common.edit') }}
-            </button>
+            </Button>
             <DangerActions
               :actions="actionsFor(provider)"
               :label="msg('common.more')"
