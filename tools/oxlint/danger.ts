@@ -27,8 +27,12 @@ export function checkDangerTemplate(source: string, filename = ''): string[] {
         errors.push('danger-requires-more-trigger')
       const control = ['button', 'a', 'input'].includes(node.tag) || /button$/iu.test(node.tag)
       const dangerous = marked || (control && words.test(node.loc.source))
-      if (dangerous && !trusted) errors.push('danger-use-shared-actions')
-      if (dangerous && trusted) {
+      const accountSignOut =
+        filename === 'web/ui/src/PageHeader.vue' &&
+        node.tag === 'button' &&
+        attrs['data-danger-action'] === 'signOut'
+      if (dangerous && !trusted && !accountSignOut) errors.push('danger-use-shared-actions')
+      if (dangerous && (trusted || accountSignOut)) {
         if (!inDropdown) errors.push('danger-requires-dropdown')
         if (!attrs.class?.split(/\s/u).includes('btn-danger')) errors.push('danger-requires-style')
         if (
@@ -36,7 +40,7 @@ export function checkDangerTemplate(source: string, filename = ''): string[] {
             (p: any) =>
               p.name === 'on' &&
               p.arg?.content === 'click' &&
-              p.exp?.content === 'action.request()',
+              p.exp?.content === (accountSignOut ? 'accountAction.request()' : 'action.request()'),
           )
         )
           errors.push('danger-requires-confirmation')

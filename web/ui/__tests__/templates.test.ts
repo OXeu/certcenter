@@ -149,3 +149,32 @@ describe('icon button label lengths', () => {
     )
   })
 })
+
+it('allows sign-out directly in the account menu with confirmation and shared styling', () => {
+  const button =
+    '<button class="btn-danger" data-danger-action="signOut" @click="accountAction.request()">Sign out</button>'
+  expect(
+    checkDangerTemplate(`<DropdownMenu>${button}</DropdownMenu>`, 'web/ui/src/PageHeader.vue'),
+  ).toEqual([])
+  expect(checkDangerTemplate(button, 'web/ui/src/PageHeader.vue')).toContain(
+    'danger-requires-dropdown',
+  )
+  expect(
+    checkDangerTemplate(
+      `<DropdownMenu>${button.replace('accountAction.request()', 'logout()')}</DropdownMenu>`,
+      'web/ui/src/PageHeader.vue',
+    ),
+  ).toContain('danger-requires-confirmation')
+  expect(
+    checkDangerTemplate(
+      `<DropdownMenu>${button.replace('btn-danger', 'btn')}</DropdownMenu>`,
+      'web/ui/src/PageHeader.vue',
+    ),
+  ).toContain('danger-requires-style')
+  expect(
+    checkDangerTemplate(
+      `<DropdownMenu>${button.replace('signOut', 'deleteUser')}</DropdownMenu>`,
+      'web/ui/src/PageHeader.vue',
+    ),
+  ).toContain('danger-use-shared-actions')
+})
