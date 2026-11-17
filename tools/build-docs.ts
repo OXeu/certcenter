@@ -5,7 +5,7 @@ const renderer = await createDocsRenderer()
 try {
   await mkdir('.tmp/docs', { recursive: true })
   await Promise.all(
-    ['index', 'api', 'sdk', 'mcp'].map(async (name) => {
+    ['index', 'api', 'sdk', 'mcp', 'config', 'operations'].map(async (name) => {
       const source = await readFile(`docs/${name}.md`, 'utf8')
       await writeFile(`.tmp/docs/${name}.html`, await renderer.render(source))
     }),

@@ -23,6 +23,8 @@ const isWorkspace = computed(() =>
 )
 const docsLinks = [
   { page: 'index', href: '/docs/', label: 'docs.overview' },
+  { page: 'config', href: '/docs/config', label: 'docs.config' },
+  { page: 'operations', href: '/docs/operations', label: 'docs.operations' },
   { page: 'api', href: '/docs/api', label: 'docs.api' },
   { page: 'sdk', href: '/docs/sdk', label: 'docs.sdk' },
   { page: 'mcp', href: '/docs/mcp', label: 'docs.mcp' },

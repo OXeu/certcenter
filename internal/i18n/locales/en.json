@@ -228,5 +228,7 @@
   "providers.help": "Saved accounts become available in certificate policies. Credentials are never returned. Accounts referenced by policies cannot be deleted.",
   "providers.keepSecret": "Leave blank to keep the stored credential. Enter a value to replace it.",
   "providers.empty": "No accounts configured. Add an account to begin.",
-  "providers.keepAccounts": "Leave blank to keep registrations. A JSON object replaces all registrations, including their credentials."
+  "providers.keepAccounts": "Leave blank to keep registrations. A JSON object replaces all registrations, including their credentials.",
+  "docs.config": "Configuration",
+  "docs.operations": "Operations"
 }

@@ -11,7 +11,7 @@
 
 ## 启动
 
-需要 Go 1.26.10、Node.js 24+、npm 和 golangci-lint v2。未填写远端地址和 API key 时，可以直接构建启动；SDK 在 `.tmp/certcenter-config.kv` 原子初始化基础配置和持久加密密钥。初始 OAuth、DNS 和部署凭据为空，ACME 条款未接受，需要按[配置指南](docs/sdk.md)通过 SDK 补齐后使用。可用 `CC_CONFIGCENTER_LOCAL_PATH` 指定持久文件路径。
+需要 Go 1.26.10、Node.js 24+、npm 和 golangci-lint v2。未填写远端地址和 API key 时，可以直接构建启动；SDK 在 `.tmp/certcenter-config.kv` 原子初始化基础配置和持久加密密钥。初始 OAuth、DNS 和部署凭据为空，ACME 条款未接受，需要按[配置指南](docs/config.md)通过 SDK 补齐后使用。可用 `CC_CONFIGCENTER_LOCAL_PATH` 指定持久文件路径。
 
 如使用远端 ConfigCenter，创建专用项目和 `production` 环境，为单项目 API key 授予 `projects:read`、`environments:read`、`config:read`、`config:write`，再执行以下配置步骤。
 
@@ -35,7 +35,7 @@
    ./.tmp/bin/certcenter
    ```
 
-4. 默认地址为 `127.0.0.1:8081`。首次启动后按[配置指南](docs/sdk.md)编辑自动生成的配置，填入 OAuth、DNS、部署凭据，保留生成的加密密钥，并重启服务。使用 OAuth 登录后，管理员在“域名”页添加域名和所有者；进入域名后添加证书策略，再执行签发或启用自动续签。
+4. 默认地址为 `127.0.0.1:8081`。首次启动后按[配置指南](docs/config.md)编辑自动生成的配置，填入 OAuth、DNS、部署凭据，保留生成的加密密钥，并重启服务。使用 OAuth 登录后，管理员在“域名”页添加域名和所有者；进入域名后添加证书策略，再执行签发或启用自动续签。
 
 生产环境应运行常驻进程，并使用持久数据库。原项目的 SCF 自动部署已移除，避免请求冻结期间续期任务停止，也避免部署到原项目服务。副本保留原 Git 历史，但移除了指向 ConfigCenter 的远端。
 
@@ -61,7 +61,7 @@ Vite 开发服务代理至 `127.0.0.1:8081`。构建输出在 `.tmp/ui`、`.tmp/
 
 源码边界：`internal/certconfig` 配置模型和 SDK 适配；`internal/dnsprovider` DNS 抽象；`internal/upstream` 部署抽象；`internal/certificates` 签发与调度；`internal/store` 数据库模型和查询；`internal/server` 会话与 HTTP；`web/ui/src` 界面。
 
-[使用指南](docs/index.md) · [HTTP API](docs/api.md) · [ConfigCenter 配置](docs/sdk.md) · [自动化说明](docs/mcp.md)
+[使用指南](docs/index.md) · [HTTP API](docs/api.md) · [配置指南](docs/config.md) · [Go SDK](docs/sdk.md) · [MCP](docs/mcp.md) · [自动化说明](docs/operations.md)
 
 ## 腾讯云函数部署
 

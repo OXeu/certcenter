@@ -228,5 +228,7 @@
   "providers.help": "保存后可在证书策略中选择账号。已有凭据不会回传；被策略引用的账号不能删除。",
   "providers.keepSecret": "留空保留已有凭据；填写新值则替换。",
   "providers.empty": "暂无账号，请先添加。",
-  "providers.keepAccounts": "留空保留注册账号。填写 JSON 对象会替换全部注册信息及其凭据。"
+  "providers.keepAccounts": "留空保留注册账号。填写 JSON 对象会替换全部注册信息及其凭据。",
+  "docs.config": "配置指南",
+  "docs.operations": "自动化与运行"
 }

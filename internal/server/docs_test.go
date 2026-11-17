@@ -13,7 +13,7 @@ import (
 
 func TestDocumentation(t *testing.T) {
 	_, r, _ := testServer(t, false)
-	for _, name := range []string{"index", "api", "sdk", "mcp"} {
+	for _, name := range []string{"index", "api", "sdk", "mcp", "config", "operations"} {
 		for _, suffix := range []string{"", ".md"} {
 			path := "/docs/" + name + suffix
 			t.Run(path, func(t *testing.T) {
