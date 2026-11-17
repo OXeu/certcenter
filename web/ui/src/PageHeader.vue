@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NavigationLink from '@oxeu/center-common/ui/NavigationLink.vue'
 import DropdownMenu from '@oxeu/center-common/ui/DropdownMenu.vue'
 import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue'
 import { api } from './core.ts'
@@ -70,21 +71,31 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <a class="sr-only" href="#main">{{ msg('nav.skip') }}</a>
+  <NavigationLink class="sr-only" href="#main">{{ msg('nav.skip') }}</NavigationLink>
   <header class="flex flex-wrap items-center gap-2 border-b px-4 py-3 sm:gap-4 sm:px-6">
-    <a class="btn-ghost btn-icon mr-auto sm:mr-0" :href="homeURL" :aria-label="msg('app.name')">
+    <NavigationLink
+      class="btn-ghost btn-icon mr-auto sm:mr-0"
+      :href="homeURL"
+      :aria-label="msg('app.name')"
+    >
       <img :src="brandIcon.src" :srcset="brandIcon.srcset" width="32" height="32" alt="" />
-    </a>
+    </NavigationLink>
     <nav
       class="order-last flex w-full flex-wrap gap-1 sm:order-none sm:w-auto sm:flex-1"
       :aria-label="msg('nav.main')"
     >
-      <a v-if="data.loggedIn" class="btn-ghost" :href="homeURL">{{ msg(homeLabel) }}</a>
-      <a v-if="manageProviders" class="btn-ghost" href="/dns-providers">{{
+      <NavigationLink v-if="data.loggedIn" class="btn-ghost" :href="homeURL">{{
+        msg(homeLabel)
+      }}</NavigationLink>
+      <NavigationLink v-if="manageProviders" class="btn-ghost" href="/dns-providers">{{
         msg('cert.dnsProviders')
-      }}</a>
-      <a v-if="manageProviders" class="btn-ghost" href="/upstreams">{{ msg('cert.upstreams') }}</a>
-      <a v-if="data.isAdmin" class="btn-ghost" href="/settings">{{ msg('title.settings') }}</a>
+      }}</NavigationLink>
+      <NavigationLink v-if="manageProviders" class="btn-ghost" href="/upstreams">{{
+        msg('cert.upstreams')
+      }}</NavigationLink>
+      <NavigationLink v-if="data.isAdmin" class="btn-ghost" href="/settings">{{
+        msg('title.settings')
+      }}</NavigationLink>
     </nav>
     <button
       class="btn-ghost btn-icon"
@@ -96,13 +107,13 @@ async function logout(): Promise<void> {
     </button>
     <DropdownMenu :label="data.languageLabel" compact>
       <template #trigger><i class="ri-global-line" aria-hidden="true"></i></template>
-      <a
+      <NavigationLink
         v-for="language in data.languages"
         :key="language.tag"
         class="block rounded-sm px-2 py-1 text-sm hover:bg-muted"
         :href="`/language?lang=${language.tag}`"
         :aria-current="language.tag === data.lang ? 'true' : undefined"
-        >{{ language.label }}</a
+        >{{ language.label }}</NavigationLink
       >
     </DropdownMenu>
     <template v-if="data.loggedIn && data.me">
@@ -144,7 +155,7 @@ async function logout(): Promise<void> {
             </div>
           </div>
           <div class="border-t border-gray-200 pt-1">
-            <a
+            <NavigationLink
               v-if="showKeys"
               class="btn-ghost w-full justify-start gap-2"
               href="/keys"
@@ -152,11 +163,15 @@ async function logout(): Promise<void> {
             >
               <i class="ri-key-2-line" aria-hidden="true"></i>
               <span>{{ msg('nav.keys') }}</span>
-            </a>
-            <a v-if="data.isAdmin" class="btn-ghost w-full justify-start gap-2" href="/users">
+            </NavigationLink>
+            <NavigationLink
+              v-if="data.isAdmin"
+              class="btn-ghost w-full justify-start gap-2"
+              href="/users"
+            >
               <i class="ri-group-line" aria-hidden="true"></i>
               <span>{{ msg('nav.users') }}</span>
-            </a>
+            </NavigationLink>
           </div>
           <div class="mt-1 border-t pt-1">
             <button

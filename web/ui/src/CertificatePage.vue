@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NavigationLink from '@oxeu/center-common/ui/NavigationLink.vue'
 import { computed, onMounted, onUnmounted } from 'vue'
 import DialogPanel from './DialogPanel.vue'
 import DangerActions from './DangerActions.vue'
@@ -71,7 +72,7 @@ onUnmounted(() => {
       </thead>
       <tbody>
         <tr v-for="domain in state.domains" :key="domain.name">
-          <td><a :href="domainURL(domain.name)">{{ domain.name }}</a></td>
+          <td><NavigationLink :href="domainURL(domain.name)">{{ domain.name }}</NavigationLink></td>
           <td>{{ domain.owner }}</td>
           <td>{{ domain.count }}</td>
         </tr>

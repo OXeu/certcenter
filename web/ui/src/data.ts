@@ -57,3 +57,19 @@ export const pages = [
   'dns-providers',
   'upstreams',
 ]
+
+export function parsePageData(value: unknown): PageData {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('page' in value) ||
+    typeof value.page !== 'string' ||
+    !pages.includes(value.page) ||
+    !('nonce' in value) ||
+    typeof value.nonce !== 'string' ||
+    !('csrf' in value) ||
+    typeof value.csrf !== 'string'
+  )
+    throw new Error('Invalid page data')
+  return value as PageData
+}
