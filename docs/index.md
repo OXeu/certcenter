@@ -4,7 +4,7 @@ CertCenter 按域名组织证书。管理员添加域名及所有者邮箱；所
 
 ## 签发流程
 
-1. 管理员在“设置”页配置 ACME，在“DNS 服务商”和“部署上游”页面添加账号，见 [配置指南](/docs/config)。先使用 Let's Encrypt staging 目录验证流程，再切换生产目录。
+1. 管理员在“设置”页配置 ACME，在“DNS 服务商”和“部署上游”页面添加账号，见 [配置指南](/docs/config)。默认使用 Let's Encrypt 生产目录；测试时可手动切换 staging，测试证书不受浏览器信任。
 2. 进入“域名”，添加 `example.com`，设置所有者邮箱。
 3. 在域名页添加证书策略，例如标识 `wildcard`，域名填写 `example.com` 和 `*.example.com`（换行或逗号分隔），选择 DNS provider。
 4. 使用本项目内置 CNAME 验证时，管理员先按[配置指南](/docs/config)启用公网验证 DNS。用户只需在原 DNS 服务商处添加页面生成的 CNAME，并点击“检查 CNAME”；无需注册凭据或 JSON。

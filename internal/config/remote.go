@@ -97,7 +97,7 @@ func configurationDefaults(cfg Config) (map[string]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("encode default key certcenter.server: %w", err)
 	}
-	providers, err := json.Marshal(certconfig.Providers{ACME: certconfig.ACME{DirectoryURL: "https://acme-staging-v02.api.letsencrypt.org/directory", Email: cfg.Bootstrap.AdminEmail}, DNS: map[string]certconfig.DNS{}, Upstreams: map[string]certconfig.Upstream{}})
+	providers, err := json.Marshal(certconfig.Providers{ACME: certconfig.ACME{DirectoryURL: "https://acme-v02.api.letsencrypt.org/directory", Email: cfg.Bootstrap.AdminEmail}, DNS: map[string]certconfig.DNS{}, Upstreams: map[string]certconfig.Upstream{}})
 	if err != nil {
 		return nil, fmt.Errorf("encode default key certcenter.providers: %w", err)
 	}

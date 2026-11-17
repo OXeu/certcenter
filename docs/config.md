@@ -80,7 +80,7 @@ MySQL 示例：`database_driver` 为 `mysql`，`database_dsn` 为 `user:password
 ```json
 {
   "acme": {
-    "directory_url": "https://acme-staging-v02.api.letsencrypt.org/directory",
+    "directory_url": "https://acme-v02.api.letsencrypt.org/directory",
     "email": "acme@example.com",
     "accept_terms": true
   },
@@ -118,7 +118,7 @@ MySQL 示例：`database_driver` 为 `mysql`，`database_dsn` 为 `user:password
 
 删除不使用的 provider 条目；每个配置条目都需要有效的必填字段。DNS provider 和 upstream 分别通过独立接口扩展。腾讯云账号需要 DNSPod TXT 写入/删除或 SSL `UploadCertificate` 对应权限；阿里云需要 AliDNS TXT 权限或 `yundun-cert:UploadUserCertificate`。DNS 与部署凭据分开配置，可使用不同的权限受限账号。
 
-`accept_terms` 表示运营者已接受所选 CA 的条款；未接受时签发失败，不自动替运营者接受。初次测试请使用 staging；其证书不受浏览器信任。确认后改用生产目录 `https://acme-v02.api.letsencrypt.org/directory` 并重新签发。不同 CA/邮箱有独立且持久的加密 ACME 账户密钥。
+`accept_terms` 表示运营者已接受所选 CA 的条款；未接受时签发失败，不自动替运营者接受。默认使用 Let's Encrypt 生产目录 `https://acme-v02.api.letsencrypt.org/directory`。需要测试时可手动切换为 `https://acme-staging-v02.api.letsencrypt.org/directory`，其证书不受浏览器信任。已有配置不会被新默认值覆盖；此前使用 staging 的实例需在设置页切换为生产目录，重新签发并部署证书。不同 CA/邮箱有独立且持久的加密 ACME 账户密钥。
 
 ### Cloudflare DNS
 

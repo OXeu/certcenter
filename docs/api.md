@@ -100,7 +100,7 @@ Cloudflare 账号的创建请求中 `dns` 为 `{ "kind": "cloudflare", "api_toke
 {
   "version": "GET 返回的 providers_version",
   "values": {
-    "directory_url": "https://acme-staging-v02.api.letsencrypt.org/directory",
+    "directory_url": "https://acme-v02.api.letsencrypt.org/directory",
     "email": "acme@example.com",
     "accept_terms": true
   }
