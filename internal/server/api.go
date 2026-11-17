@@ -10,9 +10,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/OXeu/configcenter/internal/auth"
-	"github.com/OXeu/configcenter/internal/slug"
-	"github.com/OXeu/configcenter/internal/store"
+	"github.com/OXeu/certcenter/internal/auth"
+	"github.com/OXeu/certcenter/internal/slug"
+	"github.com/OXeu/certcenter/internal/store"
 )
 
 // MountAPI registers the JSON API used by the web UI and by operators.

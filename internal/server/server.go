@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,11 +20,13 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
-	"github.com/OXeu/configcenter"
-	"github.com/OXeu/configcenter/internal/auth"
-	"github.com/OXeu/configcenter/internal/config"
-	"github.com/OXeu/configcenter/internal/i18n"
-	"github.com/OXeu/configcenter/internal/store"
+	"github.com/OXeu/certcenter"
+	"github.com/OXeu/certcenter/internal/auth"
+	"github.com/OXeu/certcenter/internal/certificates"
+	"github.com/OXeu/certcenter/internal/config"
+	"github.com/OXeu/certcenter/internal/i18n"
+	"github.com/OXeu/certcenter/internal/store"
+	"github.com/OXeu/certcenter/internal/upstream"
 )
 
 //go:embed templates/shell/vue.html
@@ -31,6 +34,8 @@ var templateFS embed.FS
 
 // Server wires storage, authentication and HTTP handlers together.
 type Server struct {
+	certificates  *certificates.Service
+	configMu      sync.Mutex
 	cfg           config.Config
 	store         *store.Store
 	authenticator *auth.Authenticator
@@ -83,6 +88,15 @@ func newServer(ctx context.Context, cfg config.Config, log *slog.Logger) (*Serve
 	if err := s.loadTemplates(); err != nil {
 		return nil, err
 	}
+	if cfg.Remote != nil {
+		st.SetRegistrationPolicy(cfg.Remote.RegistrationAllowed)
+		vault, err := certificates.NewVault(cfg.EncryptionKey)
+		if err != nil {
+			return nil, fmt.Errorf("configure certificate vault: %w", err)
+		}
+		s.certificates = &certificates.Service{Store: st, Settings: cfg.Remote, Issuer: &certificates.ACMEIssuer{Store: st, Vault: vault}, Upstream: upstream.Registry{}, Vault: vault, Log: log}
+		go s.certificates.Run(ctx)
+	}
 	return s, nil
 }
 
@@ -115,7 +129,7 @@ func sqliteDSN(dsn string) (string, error) {
 var errNoLanguage = errors.New("no enabled language has a locale file")
 
 func (s *Server) loadTemplates() error {
-	data, err := configcenter.Frontend.ReadFile(".tmp/ui/.vite/manifest.json")
+	data, err := certcenter.Frontend.ReadFile(".tmp/ui/.vite/manifest.json")
 	if err != nil {
 		return fmt.Errorf("read frontend manifest: %w", err)
 	}
@@ -182,6 +196,7 @@ func (s *Server) render(c *gin.Context, status int, data gin.H) {
 		"me": withCommon["Me"], "project": withCommon["Project"], "env": "",
 		"canWrite": loggedIn && id.User != nil && id.User.Role.CanWrite(), "languageLabel": label,
 		"messages": s.catalog.Messages(s.translator(c).Lang()), "flash": nil,
+		"certcenter": s.cfg.Remote != nil, "domain": withCommon["Domain"],
 	}
 	for _, key := range []string{"Page", "Env", "CanWrite", "DocPage"} {
 		if value, ok := withCommon[key]; ok {
@@ -226,11 +241,11 @@ func (s *Server) router() *gin.Engine {
 	r.Use(gin.Recovery(), s.requestLogger())
 	r.Use(securityHeaders())
 
-	frontend, frontendErr := fs.Sub(configcenter.Frontend, ".tmp/ui")
+	frontend, frontendErr := fs.Sub(certcenter.Frontend, ".tmp/ui")
 	if frontendErr != nil {
 		s.log.Error("mount frontend", "error", frontendErr)
 	}
-	brand, brandErr := fs.Sub(configcenter.Brand, "assets")
+	brand, brandErr := fs.Sub(certcenter.Brand, "assets")
 	if brandErr != nil {
 		s.log.Error("mount brand assets", "error", brandErr)
 	}
@@ -265,6 +280,11 @@ func (s *Server) router() *gin.Engine {
 	s.mountDocs(r)
 	s.MountOAuth(r)
 	s.MountLanguage(r)
+	if s.cfg.Remote != nil {
+		r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/domains") })
+		s.mountCertificates(r)
+		return r
+	}
 	r.GET("/", func(c *gin.Context) { c.Redirect(http.StatusFound, "/projects") })
 
 	s.MountUI(r)

@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 )
 
 // ErrNotFound is returned when a scoped lookup finds no row.
@@ -15,7 +16,8 @@ var ErrNotFound = errors.New("not found")
 
 // Store owns the database handle and every query.
 type Store struct {
-	db *gorm.DB
+	db                 *gorm.DB
+	registrationPolicy func(context.Context) (bool, error)
 }
 
 // Transaction runs fn inside a database transaction; fn receives a Store
@@ -32,12 +34,13 @@ func (s *Store) Transaction(ctx context.Context, fn func(tx *Store) error) error
 
 // Open migrates the schema and ensures the bootstrap administrator exists.
 func Open(ctx context.Context, dialector gorm.Dialector, adminEmail, adminName string) (*Store, error) {
-	db, err := gorm.Open(dialector, &gorm.Config{TranslateError: true})
+	db, err := gorm.Open(dialector, &gorm.Config{TranslateError: true, Logger: logger.Default.LogMode(logger.Silent)})
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 	if err := db.WithContext(ctx).AutoMigrate(
 		&User{}, &Session{}, &Project{}, &Environment{}, &ConfigItem{}, &APIKey{}, &MCPProposal{},
+		&Certificate{}, &ACMEAccount{}, &CertificateJob{}, &CertificateEvent{}, &Deployment{},
 	); err != nil {
 		return nil, fmt.Errorf("migrate schema: %w", err)
 	}

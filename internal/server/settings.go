@@ -3,7 +3,7 @@ package server
 import (
 	"net/http"
 
-	"github.com/OXeu/configcenter/internal/auth"
+	"github.com/OXeu/certcenter/internal/auth"
 
 	"github.com/gin-gonic/gin"
 )

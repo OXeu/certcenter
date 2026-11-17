@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OXeu/configcenter/internal/store"
+	"github.com/OXeu/certcenter/internal/store"
 )
 
 func keyRequest(t *testing.T, router http.Handler, token, method, path string, body any, want int) *httptest.ResponseRecorder {

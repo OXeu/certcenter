@@ -1,4 +1,4 @@
-package configcenter
+package certcenter
 
 import "embed"
 

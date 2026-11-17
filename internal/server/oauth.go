@@ -10,8 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/OXeu/configcenter/internal/auth"
-	"github.com/OXeu/configcenter/internal/store"
+	"github.com/OXeu/certcenter/internal/auth"
+	"github.com/OXeu/certcenter/internal/store"
 )
 
 const oauthStateCookie = "cc_oauth_state"

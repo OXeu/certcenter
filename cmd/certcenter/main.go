@@ -11,27 +11,26 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/OXeu/configcenter/internal/config"
-	"github.com/OXeu/configcenter/internal/server"
+	"github.com/OXeu/certcenter/internal/config"
+	"github.com/OXeu/certcenter/internal/server"
 )
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
 	if err := run(logger); err != nil {
-		logger.Error("configcenter stopped", "error", err)
+		logger.Error("certcenter stopped", "error", err)
 		os.Exit(1)
 	}
 }
 
 func run(logger *slog.Logger) error {
-	cfg, err := config.Load(os.LookupEnv)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	cfg, err := config.LoadRemote(ctx)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 	logger.Info("configuration loaded", "addr", cfg.Addr, "public_url", cfg.PublicURL, "oauth", cfg.OAuth.Enabled(), "database_driver", cfg.DatabaseDriver)
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	engine, err := server.Engine(ctx, cfg, logger)
 	if err != nil {

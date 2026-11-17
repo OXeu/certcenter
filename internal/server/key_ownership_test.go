@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OXeu/configcenter/internal/apikey"
-	"github.com/OXeu/configcenter/internal/store"
+	"github.com/OXeu/certcenter/internal/apikey"
+	"github.com/OXeu/certcenter/internal/store"
 )
 
 func TestUsersManageTheirOwnScopedKeys(t *testing.T) {

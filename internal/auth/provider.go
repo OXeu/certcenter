@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/OXeu/configcenter/internal/oauth"
-	"github.com/OXeu/configcenter/internal/store"
+	"github.com/OXeu/certcenter/internal/oauth"
+	"github.com/OXeu/certcenter/internal/store"
 )
 
 // Provider abstracts OIDC and plain OAuth 2.0 identity servers.
@@ -65,8 +65,8 @@ type Claims oauth.Claims
 
 // GroupPolicy maps OAuth groups onto roles.
 type GroupPolicy struct {
-	AdminGroups []string
-	Mapping     map[string]string
+	AdminGroups []string          `json:"admin_groups"`
+	Mapping     map[string]string `json:"mapping"`
 }
 
 // AdminIn reports whether any group grants the admin role.

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OXeu/configcenter"
+	"github.com/OXeu/certcenter"
 )
 
 func TestDocumentation(t *testing.T) {
@@ -29,7 +29,7 @@ func TestDocumentation(t *testing.T) {
 					t.Fatalf("unexpected documentation response: %d %s", rec.Code, rec.Header().Get("Content-Type"))
 				}
 				if suffix == ".md" {
-					source, err := configcenter.Documentation.ReadFile("docs/" + name + ".md")
+					source, err := certcenter.Documentation.ReadFile("docs/" + name + ".md")
 					if err != nil {
 						t.Fatal(err)
 					}

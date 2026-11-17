@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/OXeu/configcenter"
+	"github.com/OXeu/certcenter"
 )
 
 func (s *Server) mountDocs(r *gin.Engine) {
@@ -28,7 +28,7 @@ func (s *Server) serveDocs(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	source, err := configcenter.Documentation.ReadFile("docs/" + name + ".md")
+	source, err := certcenter.Documentation.ReadFile("docs/" + name + ".md")
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
 		return
@@ -37,7 +37,7 @@ func (s *Server) serveDocs(c *gin.Context) {
 		c.Data(http.StatusOK, "text/markdown; charset=utf-8", source)
 		return
 	}
-	body, err := configcenter.RenderedDocumentation.ReadFile(".tmp/docs/" + name + ".html")
+	body, err := certcenter.RenderedDocumentation.ReadFile(".tmp/docs/" + name + ".html")
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
 		return
@@ -50,5 +50,5 @@ func (s *Server) serveDocs(c *gin.Context) {
 
 func serveDocStyles(c *gin.Context) {
 	c.Header("Cache-Control", "public, max-age=3600")
-	serveStaticFile(c, configcenter.RenderedDocumentation, ".tmp/docs/shiki.css")
+	serveStaticFile(c, certcenter.RenderedDocumentation, ".tmp/docs/shiki.css")
 }

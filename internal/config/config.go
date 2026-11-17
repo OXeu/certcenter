@@ -11,29 +11,34 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 
-	"github.com/OXeu/configcenter/internal/auth"
+	"github.com/OXeu/certcenter/internal/auth"
+	"github.com/OXeu/certcenter/internal/certconfig"
 )
 
 // Config holds every runtime setting of the server.
 type Config struct {
-	Addr           string
-	DatabaseDriver string
-	DatabaseDSN    string
-	PublicURL      string
-	SessionSecret  string
-	SessionTTL     time.Duration
+	Remote            *certconfig.Remote `json:"-"`
+	ConfigCenterURL   string             `json:"-"`
+	EncryptionKey     string             `json:"encryption_key"`
+	AllowRegistration bool               `json:"allow_registration"`
+	Addr              string             `json:"addr"`
+	DatabaseDriver    string             `json:"database_driver"`
+	DatabaseDSN       string             `json:"database_dsn"`
+	PublicURL         string             `json:"public_url"`
+	SessionSecret     string             `json:"session_secret"`
+	SessionTTL        time.Duration      `json:"session_ttl"`
 	// Languages lists the enabled UI languages; the first supported one is
 	// the default. Tags must match the locale files in internal/i18n.
-	Languages []string
-	OAuth     auth.Config
-	Groups    auth.GroupPolicy
-	Bootstrap Bootstrap
+	Languages []string         `json:"languages"`
+	OAuth     auth.Config      `json:"oauth"`
+	Groups    auth.GroupPolicy `json:"groups"`
+	Bootstrap Bootstrap        `json:"bootstrap"`
 }
 
 // Bootstrap is the first-run administrator created when no user exists yet.
 type Bootstrap struct {
-	AdminEmail string
-	AdminName  string
+	AdminEmail string `json:"admin_email"`
+	AdminName  string `json:"admin_name"`
 }
 
 // DefaultEnvFile is read by the binary unless CC_ENV_FILE points elsewhere.

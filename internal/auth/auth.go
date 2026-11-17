@@ -14,7 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/OXeu/configcenter/internal/store"
+	"github.com/OXeu/certcenter/internal/store"
 )
 
 // Authenticator resolves browser sessions and API keys.
@@ -43,12 +43,12 @@ type Store interface {
 
 // Config is the upstream identity provider configuration.
 type Config struct {
-	IssuerURL    string
-	ClientID     string
-	ClientSecret string
-	Scopes       []string
-	RedirectURL  string
-	GroupsClaim  string
+	IssuerURL    string   `json:"issuer_url"`
+	ClientID     string   `json:"client_id"`
+	ClientSecret string   `json:"client_secret"`
+	Scopes       []string `json:"scopes"`
+	RedirectURL  string   `json:"redirect_url"`
+	GroupsClaim  string   `json:"groups_claim"`
 }
 
 // Enabled reports whether OAuth login is configured.

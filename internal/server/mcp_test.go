@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OXeu/configcenter/internal/store"
+	"github.com/OXeu/certcenter/internal/store"
 )
 
 func mcpCall(t *testing.T, router http.Handler, token, name string, args map[string]any, want int) map[string]any {

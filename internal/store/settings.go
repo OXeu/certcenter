@@ -21,6 +21,9 @@ func (s *Store) settingsEnvironment(ctx context.Context) (Project, Environment, 
 
 // RegistrationAllowed reads the registration policy from the internal project.
 func (s *Store) RegistrationAllowed(ctx context.Context) (bool, error) {
+	if s.registrationPolicy != nil {
+		return s.registrationPolicy(ctx)
+	}
 	p, e, err := s.settingsEnvironment(ctx)
 	if err != nil {
 		return false, err
@@ -37,6 +40,11 @@ func (s *Store) RegistrationAllowed(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("parse registration policy: %w", err)
 	}
 	return allowed, nil
+}
+
+// SetRegistrationPolicy selects a remote policy source instead of local settings.
+func (s *Store) SetRegistrationPolicy(policy func(context.Context) (bool, error)) {
+	s.registrationPolicy = policy
 }
 
 // SetRegistrationAllowed persists the registration policy in the internal project.

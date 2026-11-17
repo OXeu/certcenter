@@ -1,4 +1,4 @@
-name: CI and deploy
+name: CI
 on:
   push:
     branches: [main]
@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: configcenter-${{ github.ref }}
+  group: certcenter-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   check:
@@ -42,52 +42,3 @@ jobs:
       - run: make check
       - run: TMPDIR="$PWD/.tmp" go test -tags=mysql ./internal/server -run TestMySQLStore -count=1
       - run: make build
-  deploy:
-    needs: check
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.SCF_DEPLOY_ENABLED == 'true'
-    runs-on: ubuntu-latest
-    environment: production
-    env:
-      STAGE: production
-      SERVERLESS_PLATFORM_VENDOR: tencent
-      SCF_REGION: ${{ vars.SCF_REGION }}
-      SCF_VPC_ID: ${{ vars.SCF_VPC_ID }}
-      SCF_SUBNET_ID: ${{ vars.SCF_SUBNET_ID }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - name: Build Linux deployment package
-        run: |
-          mkdir -p .tmp/scf
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build BIN=.tmp/scf/configcenter
-          cp scf_bootstrap .tmp/scf/scf_bootstrap
-          chmod +x .tmp/scf/scf_bootstrap
-      - name: Prepare runtime configuration
-        env:
-          RUNTIME_ENV: ${{ secrets.SCF_RUNTIME_ENV }}
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-        run: |
-          test -n "$TENCENT_SECRET_ID"
-          test -n "$TENCENT_SECRET_KEY"
-          test -n "$SCF_REGION"
-          test -n "$SCF_VPC_ID"
-          test -n "$SCF_SUBNET_ID"
-          test -n "$RUNTIME_ENV"
-          umask 077
-          printf '%s\n' "$RUNTIME_ENV" > .tmp/scf/.env.local
-      - name: Deploy Tencent SCF
-        uses: woodyyan/tencent-serverless-action@56a4f1cf4ccd306834307c882a893ceb2c7e49e1
-        env:
-          TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-          TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-      - name: Remove runtime configuration
-        if: always()
-        run: rm -f .tmp/scf/.env.local
