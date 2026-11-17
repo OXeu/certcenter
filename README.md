@@ -85,4 +85,6 @@ CC_CONFIGCENTER_ENVIRONMENT=production
 
 MySQL、OAuth、会话密钥和公网地址等业务设置通过 SDK 写入 ConfigCenter 的生产环境。数据库须提前创建，并授予运行账号该库的建表、迁移和读写权限。公网域名须绑定函数的 `$DEFAULT` 别名并配置 HTTPS，OAuth 应用须登记该域名的 `/oauth/callback`。
 
-部署先更新代码，再发布版本并启动一个预置实例，待实例就绪后切换 `$DEFAULT` 流量。预置实例用于持续运行证书任务和自动续签调度，会产生持续的实例费用。旧版本的预置实例在切换后释放。部署包与 CLI 状态仅保存在 `.tmp/`，不上传为 GitHub artifact；部署结束会清理含 SDK 凭据的文件和临时包。
+SCF 统一使用北京时间（`TZ=Asia/Shanghai`）、64MB 内存、单实例静态 100 并发和 1 秒请求队列缓冲。SCF 组件不透传 `IntranetConfig`，部署流程通过 `tools/scf-network.py certcenter` 启用固定内网出口 IP 并回读验证；手动部署也须在发布版本前执行该步骤。
+
+部署先更新代码和网络配置，再发布版本并启动一个预置实例，待实例就绪后切换 `$DEFAULT` 流量。预置实例用于持续运行证书任务和自动续签调度，会产生持续的实例费用。旧版本的预置实例在切换后释放。部署包与 CLI 状态仅保存在 `.tmp/`，不上传为 GitHub artifact；部署结束会清理含 SDK 凭据的文件和临时包。

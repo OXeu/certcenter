@@ -8,15 +8,22 @@ inputs:
   type: web
   runtime: Go1
   region: ${env:SCF_REGION}
-  memorySize: 128
+  memorySize: 64
   timeout: 30
   initTimeout: 60
+  instanceConcurrencyConfig:
+    enable: true
+    dynamicEnabled: false
+    maxConcurrency: 100
+  overClockConfig:
+    timeOut: 1
   publicAccess: true
   vpcConfig:
     vpcId: ${env:SCF_VPC_ID}
     subnetId: ${env:SCF_SUBNET_ID}
   environment:
     variables:
+      TZ: Asia/Shanghai
       CC_ENV_FILE: /var/user/.env.local
   events:
     - http:

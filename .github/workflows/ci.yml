@@ -114,7 +114,9 @@ jobs:
         env:
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
           TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
-        run: .tmp/scf-venv/bin/python tools/scf-release.py
+        run: |
+          .tmp/scf-venv/bin/python tools/scf-network.py certcenter
+          .tmp/scf-venv/bin/python tools/scf-release.py
       - name: Verify deployed login page
         env:
           SCF_PUBLIC_URL: ${{ vars.SCF_PUBLIC_URL }}
