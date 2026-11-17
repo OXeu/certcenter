@@ -1,11 +1,15 @@
 import { parse } from '@vue/compiler-dom'
 import { overridesDropdownPosition } from './dropdown.ts'
+import { formFeedback } from './form-feedback.ts'
 
-export function checkTemplate(source: string, filename = ''): string[] {
+export function checkTemplate(source: string, filename = '', script = ''): string[] {
   const errors: string[] = []
+  const feedback = formFeedback(script)
   const emoji = /\p{Extended_Pictographic}/u
   /** @param {any} node @param {boolean} dialog */
-  function walk(node: any, dialog: boolean = false) {
+  function walk(node: any, dialog: boolean = false, field: boolean = false) {
+    if (node.type === 5 && feedback(node.content.content, field))
+      errors.push('form-feedback-use-toast')
     if (node.type === 2 && emoji.test(node.content)) errors.push('inline-icon')
     if (node.type === 1) {
       const attrs = Object.fromEntries(
@@ -50,6 +54,13 @@ export function checkTemplate(source: string, filename = ''): string[] {
       if (attrs.role === 'checkbox' && filename !== 'web/ui/src/CheckboxField.vue')
         errors.push('checkbox-use-shared-component')
       const classes = (attrs.class ?? '').split(/\s+/u)
+      field ||= dialog && classes.includes('field')
+      if (/^(?:Alert|Notification|FormFeedback|SubmitResult|SubmissionResult)$/iu.test(node.tag))
+        errors.push('form-feedback-use-toast')
+      if (
+        /\b(?:form|submit|submission)-(?:error|success|result|feedback)\b/u.test(attrs.class ?? '')
+      )
+        errors.push('form-feedback-use-toast')
       const panel =
         classes.some((name: string) =>
           ['dropdown-panel', 'dropdown-content', 'dropdown-options'].includes(name),
@@ -78,7 +89,11 @@ export function checkTemplate(source: string, filename = ''): string[] {
       )
         errors.push('no-native-select: use DropdownSelect instead')
       if (node.tag === 'svg') errors.push('inline-icon')
-      if (['alert', 'status', 'log', 'tooltip'].includes(attrs.role)) errors.push('inline-message')
+      if (
+        ['alert', 'status', 'log', 'tooltip'].includes(attrs.role) &&
+        filename !== 'web/ui/src/ToastViewport.vue'
+      )
+        errors.push('inline-message')
       if (
         /\b(alert|notice|callout|tooltip|popover|inline-error|toast-container)\b/u.test(
           attrs.class ?? '',
@@ -91,6 +106,8 @@ export function checkTemplate(source: string, filename = ''): string[] {
       if (attrs.target === '_blank' && !attrs.rel?.split(' ').includes('noopener'))
         errors.push('unsafe-link')
       for (const prop of node.props.filter((p: any) => p.type === 7)) {
+        if (!['on', 'model', 'for'].includes(prop.name) && feedback(prop.exp?.content ?? '', field))
+          errors.push('form-feedback-use-toast')
         if ((prop.exp?.content.length ?? 0) > 50) errors.push('long-expression')
         if (prop.name === 'html') errors.push('unsafe-html')
         if (/document\.|innerHTML|outerHTML|insertAdjacentHTML/u.test(prop.exp?.content ?? ''))
@@ -104,7 +121,7 @@ export function checkTemplate(source: string, filename = ''): string[] {
       )
         errors.push('unnamed-control')
     }
-    for (const child of node.children ?? []) walk(child, dialog)
+    for (const child of node.children ?? []) walk(child, dialog, field)
   }
   walk(parse(source))
   return errors

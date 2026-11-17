@@ -1,3 +1,4 @@
+import { notify } from '../src/toast.ts'
 import type { PageData } from '../src/data.ts'
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { createWorkspace } from '../src/workspace.ts'
@@ -26,6 +27,7 @@ const data: PageData = {
 }
 const fetchMock = vi.fn()
 beforeEach(() => {
+  vi.mocked(notify).mockClear()
   vi.stubGlobal('fetch', fetchMock)
   fetchMock.mockReset().mockResolvedValue({
     ok: true,
@@ -63,7 +65,7 @@ describe('workspace mutations', () => {
     expect(w.form.token).toBe('cc_once')
     expect(w.form.open).toBe(true)
   })
-  it('keeps failed edits open with a translated error', async () => {
+  it('keeps failed edits open and toasts the server error', async () => {
     const w = createWorkspace(data, createPage(data))
     w.edit()
     fetchMock.mockResolvedValueOnce({
@@ -73,9 +75,7 @@ describe('workspace mutations', () => {
     })
     await w.form.submit()
     expect(w.form.open).toBe(true)
-    expect(w.form.error).toBe(
-      'This record changed or conflicts with an existing record. Refresh and try again.',
-    )
+    expect(notify).toHaveBeenLastCalledWith('error', expect.any(String), 'duplicate')
   })
   it('requires confirmation before deleting or reviewing a proposal', async () => {
     const w = createWorkspace(data, createPage(data))
@@ -134,7 +134,7 @@ it('reports network failures without discarding form values', async () => {
   fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
   await w.form.submit()
   expect(w.form.values.key).toBe('keep')
-  expect(w.form.error).toBe('Network error, try again.')
+  expect(notify).toHaveBeenLastCalledWith('error', expect.any(String), 'Network error, try again.')
   expect(w.form.busy).toBe(false)
 })
 
@@ -197,7 +197,11 @@ it('validates incomplete scopes before sending a request and permits explicit no
   w.form.scopes = [{ id: 1, project: 'billing', permissions: [] }]
   await w.form.submit()
   expect(fetchMock).not.toHaveBeenCalled()
-  expect(w.form.error).toBe('Choose a project and at least one permission for each scope.')
+  expect(notify).toHaveBeenLastCalledWith(
+    'error',
+    expect.any(String),
+    'Choose a project and at least one permission for each scope.',
+  )
   w.form.excludeScope(1)
   await w.form.submit()
   expect(fetchMock.mock.calls[0][1].body).toBe(JSON.stringify({ name: '', scopes: [] }))

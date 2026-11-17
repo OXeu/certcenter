@@ -24,10 +24,10 @@ export async function api(path: string, init: ApiInit = {}): Promise<any> {
   if (resp.status === 204) return null
   /** @type {any} */
   const data: any = await resp.json().catch(() => ({}))
-  if (!resp.ok)
-    throw new Error(typeof data.error === 'string' ? data.error : `HTTP ${resp.status}`, {
-      cause: resp.status,
-    })
+  if (!resp.ok) {
+    const detail = typeof data?.error === 'string' ? data.error.trim() : ''
+    throw new ApiError(resp.status, detail)
+  }
   return data
 }
 
@@ -39,3 +39,4 @@ export function timeOnly(iso: string | null | undefined): string {
   if (!iso || iso.startsWith('0001-')) return ''
   return new Date(iso).toLocaleString()
 }
+import { ApiError } from './errors.ts'

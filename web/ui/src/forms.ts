@@ -11,7 +11,6 @@ export function createForm(page: import('./page.ts').PageContext) {
     danger: false,
     title: '',
     busy: false,
-    error: '',
     token: '',
     scopes: null as ScopeDraft[] | null,
     scopeProjects: [] as Choice[],
@@ -37,7 +36,6 @@ export function createForm(page: import('./page.ts').PageContext) {
         fields.filter((field) => field.choices).map((field) => [field.key, []]),
       )
       this.action = action
-      this.error = ''
       this.token = ''
       this.scopes = null
       this.open = true
@@ -66,7 +64,6 @@ export function createForm(page: import('./page.ts').PageContext) {
     async submit() {
       if (this.busy) return
       this.busy = true
-      this.error = ''
       try {
         for (const field of this.fields) {
           if (
@@ -81,7 +78,7 @@ export function createForm(page: import('./page.ts').PageContext) {
         await this.action()
         if (!this.token) this.open = false
       } catch (err) {
-        this.error = page.describe(err)
+        page.report(err)
       } finally {
         this.busy = false
       }

@@ -61,6 +61,7 @@ const detail = {
 }
 const fetchMock = vi.fn()
 beforeEach(() => {
+  vi.mocked(notify).mockClear()
   vi.stubGlobal('fetch', fetchMock)
   fetchMock
     .mockReset()
@@ -115,7 +116,7 @@ describe('certificate management', () => {
     })
     await workspace.form.submit()
     expect(workspace.form.open).toBe(true)
-    expect(workspace.form.error).not.toBe('')
+    expect(notify).toHaveBeenLastCalledWith('error', expect.any(String), 'settings changed')
   })
   it('renders certificate expiry and edits only inside the shared native dialog', async () => {
     const wrapper = mount(CertificatePage, { props: { data, page: createPage(data) } })

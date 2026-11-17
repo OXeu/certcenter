@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref, watch, nextTick, useId } from 'vue'
+import { computed, ref, watch, nextTick, useId, onBeforeUnmount } from 'vue'
+import { toastTarget } from './toast-host.ts'
 import DropdownSelect from './DropdownSelect.vue'
 import CheckboxField from './CheckboxField.vue'
 const formId = useId()
@@ -25,11 +26,20 @@ watch(
   () => props.form.open,
   async (open) => {
     await nextTick()
-    if (open) dialog.value?.showModal()
-    else dialog.value?.close()
+    if (open && dialog.value) {
+      dialog.value.showModal()
+      toastTarget.value = dialog.value
+    } else {
+      releaseToasts()
+      dialog.value?.close()
+    }
   },
   { immediate: true },
 )
+function releaseToasts() {
+  if (toastTarget.value === dialog.value) toastTarget.value = 'body'
+}
+onBeforeUnmount(releaseToasts)
 /** @param {Event} event */
 function cancel(event) {
   if (props.form.busy) {
@@ -156,7 +166,6 @@ function cancel(event) {
       <p v-if="form.token" class="field">
         {{ msg('projects.tokenIssued') }}<code class="break-all">{{ form.token }}</code>
       </p>
-      <p v-if="form.error" class="field">{{ form.error }}</p>
       <div class="flex flex-wrap justify-end gap-2">
         <button class="btn-ghost" type="button" :disabled="form.busy" @click="form.open = false">
           {{ msg('common.cancel') }}

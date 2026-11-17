@@ -1,12 +1,11 @@
-import { mountToaster, toast } from '@yusufceng1z/ding'
+import { injectStyles, toast } from '@yusufceng1z/ding'
 
 import { createCopy } from './i18n.ts'
 
 let mounted = false
 
 /**
- * Mounts the toast viewport once; the library injects its own stylesheet and
- * live regions, so no component renders a message element.
+ * Configures the shared Vue toast viewport and its CSP-compatible stylesheet.
  * @param {string} lang
  * @param {string} [nonce]
  * @param {import('./theme.ts').Theme} [theme]
@@ -20,10 +19,11 @@ export function mountToasts(
   const { msg } = createCopy(lang)
   if (!mounted) {
     mounted = true
-    mountToaster({ position: 'bottom-right', theme, nonce })
+    injectStyles(document, { nonce })
   }
   toast.configure({
     labels: { region: msg('toast.region'), dismiss: msg('toast.dismiss') },
+    position: 'bottom-right',
     held: 'queue',
     theme,
   })

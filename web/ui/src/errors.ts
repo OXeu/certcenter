@@ -11,6 +11,15 @@ const statusMessages: Record<string, string> = {
 
 export class FormValidationError extends Error {}
 
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly detail: string = '',
+  ) {
+    super(detail || `HTTP ${status}`, { cause: status })
+  }
+}
+
 /**
  * @param {unknown} err
  * @returns {string}
@@ -29,14 +38,14 @@ function codeOf(err: unknown): number {
 }
 
 /**
- * Translates a failed request by its status; an unknown status keeps the
- * server's own text.
+ * Preserves API error details and translates failures without a server message.
  * @param {(id: string) => string} msg
  * @param {unknown} err
  * @returns {string}
  */
 export function describeError(msg: (id: string) => string, err: unknown): string {
   if (err instanceof FormValidationError) return err.message
+  if (err instanceof ApiError && err.detail) return err.detail
   const code = codeOf(err)
   const key = code === 0 ? 'error.network' : statusMessages[code]
   if (key === undefined) return messageOf(err)

@@ -1,3 +1,4 @@
+import { notify } from '../src/toast.ts'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { flushPromises, mount } from '@vue/test-utils'
 import ProviderPage from '../src/ProviderPage.vue'
@@ -30,6 +31,7 @@ const data: PageData = {
 const provider = { name: 'cloud', fields: { kind: 'aliyun', region: 'cn-hangzhou' } }
 const fetchMock = vi.fn()
 beforeEach(() => {
+  vi.mocked(notify).mockClear()
   vi.stubGlobal('fetch', fetchMock)
   fetchMock.mockReset().mockResolvedValue({
     ok: true,
@@ -62,7 +64,7 @@ describe('provider management', () => {
       access_key: 'irrelevant',
     })
     await workspace.form.submit()
-    expect(workspace.form.error).toBe('')
+    expect(workspace.form.open).toBe(false)
     const write = fetchMock.mock.calls.find((call) => call[1].method === 'POST')!
     expect(write[0]).toBe('/api/v1/upstreams')
     expect(write[1].headers['X-CSRF-Token']).toBe('provider-csrf')
@@ -87,7 +89,7 @@ describe('provider management', () => {
     })
     await workspace.form.submit()
     expect(workspace.form.open).toBe(true)
-    expect(workspace.form.error).not.toBe('')
+    expect(notify).toHaveBeenLastCalledWith('error', expect.any(String), 'settings changed')
     const write = fetchMock.mock.calls[1]
     expect(write[0]).toBe('/api/v1/upstreams/cloud')
     expect(JSON.parse(write[1].body)).toMatchObject({
@@ -116,7 +118,7 @@ describe('provider management', () => {
       api_token: 'cloudflare-secret',
     })
     await workspace.form.submit()
-    expect(workspace.form.error).toBe('')
+    expect(workspace.form.open).toBe(false)
     expect(fetchMock.mock.calls[1][0]).toBe('/api/v1/dns-providers')
     expect(JSON.parse(fetchMock.mock.calls[1][1].body).dns).toEqual({
       kind: 'cloudflare',

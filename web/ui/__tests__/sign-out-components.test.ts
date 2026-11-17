@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { flushPromises, mount } from '@vue/test-utils'
 import PageHeader from '../src/PageHeader.vue'
+import { notify } from '../src/toast.ts'
 import { createCopy } from '../src/i18n.ts'
 import type { PageData } from '../src/data.ts'
+
+vi.mock('../src/toast.ts', () => ({ notify: vi.fn() }))
 
 const data: PageData = {
   page: 'docs',
@@ -119,7 +122,8 @@ describe('sign-out confirmation', () => {
     await wrapper.get('dialog form').trigger('submit')
     await flushPromises()
     expect(wrapper.get('dialog').element.open).toBe(true)
-    expect(wrapper.get('dialog .field').text()).toBe('Server error, try again.')
+    expect(notify).toHaveBeenLastCalledWith('error', expect.any(String), 'Server error, try again.')
+    expect(wrapper.find('dialog .field').exists()).toBe(false)
     expect(location.assign).not.toHaveBeenCalled()
     await wrapper.get('dialog form').trigger('submit')
     await flushPromises()

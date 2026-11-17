@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { flushPromises, mount } from '@vue/test-utils'
 import App from '../src/App.vue'
+import { notify } from '../src/toast.ts'
 import type { PageData } from '../src/data.ts'
 
 vi.mock('../src/toast.ts', () => ({
@@ -174,7 +175,14 @@ describe('API key scope editor', () => {
     await dialog.get('[role="combobox"]').trigger('keydown', { key: 'Escape' })
     await dialog.get('form').trigger('submit')
     await settled()
-    expect(dialog.text()).toContain('Choose a project and at least one permission for each scope.')
+    expect(notify).toHaveBeenLastCalledWith(
+      'error',
+      expect.any(String),
+      'Choose a project and at least one permission for each scope.',
+    )
+    expect(dialog.text()).not.toContain(
+      'Choose a project and at least one permission for each scope.',
+    )
     expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(false)
     await dialog.get('[role="checkbox"][value="config:read"]').trigger('click')
     await dialog.get('form').trigger('submit')

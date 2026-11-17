@@ -1,6 +1,7 @@
 <script setup>
 import { computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import PageHeader from './PageHeader.vue'
+import ToastViewport from './ToastViewport.vue'
 import { createPage } from './page.ts'
 import { useTheme } from './theme.ts'
 import { mountToasts, notify, setToastTheme } from './toast.ts'
@@ -47,6 +48,7 @@ onMounted(() => {
     class="bg-background text-foreground"
     :class="{ 'min-h-screen': !isDocs }"
   >
+    <ToastViewport />
     <PageHeader
       :data="data"
       :msg="msg"

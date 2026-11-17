@@ -26,7 +26,7 @@ function check(directory: string): void {
       const { descriptor } = parse(readFileSync(path, 'utf8'))
       const source = descriptor.template?.content ?? ''
       const errors = [
-        ...checkTemplate(source, path),
+        ...checkTemplate(source, path, descriptor.scriptSetup?.content ?? ''),
         ...descriptor.styles.flatMap((style) => checkDropdownStyles(style.content)),
         ...checkDangerTemplate(source, path),
         ...checkIconLabels(source, descriptor.scriptSetup?.content ?? '', catalogs),
