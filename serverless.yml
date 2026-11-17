@@ -1,0 +1,28 @@
+app: certcenter
+component: scf
+name: certcenter
+stage: production
+inputs:
+  name: certcenter
+  src: ./.tmp/scf
+  type: web
+  runtime: Go1
+  region: ${env:SCF_REGION}
+  memorySize: 128
+  timeout: 30
+  initTimeout: 60
+  publicAccess: true
+  vpcConfig:
+    vpcId: ${env:SCF_VPC_ID}
+    subnetId: ${env:SCF_SUBNET_ID}
+  environment:
+    variables:
+      CC_ENV_FILE: /var/user/.env.local
+  events:
+    - http:
+        parameters:
+          netConfig:
+            enableIntranet: true
+            enableExtranet: true
+          qualifier: $DEFAULT
+          authType: NONE

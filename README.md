@@ -62,3 +62,27 @@ Vite 开发服务代理至 `127.0.0.1:8081`。构建输出在 `.tmp/ui`、`.tmp/
 源码边界：`internal/certconfig` 配置模型和 SDK 适配；`internal/dnsprovider` DNS 抽象；`internal/upstream` 部署抽象；`internal/certificates` 签发与调度；`internal/store` 数据库模型和查询；`internal/server` 会话与 HTTP；`web/ui/src` 界面。
 
 [使用指南](docs/index.md) · [HTTP API](docs/api.md) · [ConfigCenter 配置](docs/sdk.md) · [自动化说明](docs/mcp.md)
+
+## 腾讯云函数部署
+
+`serverless.yml` 将应用部署为广州区的 `certcenter` Web 函数，监听地址需在 ConfigCenter 的 `certcenter.server` 中配置为 `0.0.0.0:9000`。数据库使用有持久存储的 MySQL；函数本地 KV 和 SQLite 不用于生产部署。
+
+GitHub Actions 的 `production` 部署使用以下仓库配置：
+
+| 类型 | 名称 | 内容 |
+| --- | --- | --- |
+| Secret | `TENCENT_SECRET_ID`、`TENCENT_SECRET_KEY` | 腾讯云部署凭据 |
+| Secret | `SCF_RUNTIME_ENV` | SDK 连接的 dotenv 文件，见下方示例 |
+| Variable | `SCF_REGION`、`SCF_VPC_ID`、`SCF_SUBNET_ID` | 函数地域和数据库所在网络 |
+| Variable | `SCF_PUBLIC_URL` | 部署后验证使用的 HTTPS 地址 |
+| Variable | `SCF_DEPLOY_ENABLED` | 设置为 `true` 后，main 分支检查通过会自动部署 |
+
+```dotenv
+CC_CONFIGCENTER_URL=https://your-configcenter.example
+CC_CONFIGCENTER_API_KEY=cc_replace
+CC_CONFIGCENTER_ENVIRONMENT=production
+```
+
+MySQL、OAuth、会话密钥和公网地址等业务设置通过 SDK 写入 ConfigCenter 的生产环境。数据库须提前创建，并授予运行账号该库的建表、迁移和读写权限。公网域名须绑定函数的 `$DEFAULT` 别名并配置 HTTPS，OAuth 应用须登记该域名的 `/oauth/callback`。
+
+部署先更新代码，再发布版本并启动一个预置实例，待实例就绪后切换 `$DEFAULT` 流量。预置实例用于持续运行证书任务和自动续签调度，会产生持续的实例费用。旧版本的预置实例在切换后释放。部署包与 CLI 状态仅保存在 `.tmp/`，不上传为 GitHub artifact；部署结束会清理含 SDK 凭据的文件和临时包。
