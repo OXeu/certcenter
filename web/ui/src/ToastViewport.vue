@@ -2,7 +2,8 @@
 import { onUnmounted, shallowRef } from 'vue'
 import { toast } from '@yusufceng1z/ding'
 import ToastItem from './ToastItem.vue'
-import { toastTarget } from './toast-host.ts'
+import { useToastHost } from '@oxeu/center-common/ui/toast-host.ts'
+const toastHost = useToastHost()
 
 const state = shallowRef(toast.getState())
 const unsubscribe = toast.subscribe(() => {
@@ -20,7 +21,7 @@ function dismiss() {
 }
 </script>
 <template>
-  <Teleport :to="toastTarget">
+  <Teleport :to="toastHost.target">
     <div
       class="tst-viewport"
       role="region"

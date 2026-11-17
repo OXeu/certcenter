@@ -1,5 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vite-plus/test'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, config } from '@vue/test-utils'
+import { createRouter, createMemoryHistory, routerKey } from 'vue-router'
 import { notify } from '../src/toast.ts'
 import CertificatePage from '../src/CertificatePage.vue'
 import { createCertificateWorkspace } from '../src/workspace.ts'
@@ -61,6 +62,14 @@ const detail = {
 }
 const fetchMock = vi.fn()
 beforeEach(() => {
+  Reflect.set(
+    config.global.provide,
+    routerKey,
+    createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/:pathMatch(.*)*', component: {}, meta: { document: true } }],
+    }),
+  )
   vi.mocked(notify).mockClear()
   vi.stubGlobal('fetch', fetchMock)
   fetchMock
@@ -74,12 +83,31 @@ beforeEach(() => {
   }
 })
 afterEach(() => {
+  Reflect.deleteProperty(config.global.provide, routerKey)
   vi.unstubAllGlobals()
 })
 
 describe('certificate management', () => {
+  it('navigates to a newly created domain through the supplied Router action', async () => {
+    const navigate = vi.fn()
+    const workspace = createCertificateWorkspace(
+      { ...data, page: 'domains' },
+      createPage(data),
+      navigate,
+    )
+    workspace.createDomain()
+    workspace.form.values.name = 'new.example'
+    workspace.form.values.owner = 'admin@example.com'
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ name: 'new.example' }),
+    })
+    await workspace.form.submit()
+    expect(navigate).toHaveBeenCalledWith('/domains/new.example')
+  })
   it('persists policy options with CSRF and the revision read before editing', async () => {
-    const workspace = createCertificateWorkspace(data, createPage(data))
+    const workspace = createCertificateWorkspace(data, createPage(data), vi.fn())
     await workspace.refresh()
     workspace.editPolicy(policy)
     workspace.form.values.auto_renew = 'false'
@@ -95,7 +123,7 @@ describe('certificate management', () => {
     expect(workspace.form.open).toBe(false)
   })
   it('defers external operations until the shared confirmation is submitted', async () => {
-    const workspace = createCertificateWorkspace(data, createPage(data))
+    const workspace = createCertificateWorkspace(data, createPage(data), vi.fn())
     await workspace.refresh()
     const actions = workspace.actionsFor(policy)
     actions[1].request()
@@ -106,7 +134,7 @@ describe('certificate management', () => {
     expect(fetchMock.mock.calls[1][1].method).toBe('POST')
   })
   it('retains a stale edit and reports its error instead of overwriting a policy', async () => {
-    const workspace = createCertificateWorkspace(data, createPage(data))
+    const workspace = createCertificateWorkspace(data, createPage(data), vi.fn())
     await workspace.refresh()
     workspace.editPolicy(policy)
     fetchMock.mockResolvedValueOnce({
@@ -152,7 +180,7 @@ describe('certificate management', () => {
       status: 200,
       json: async () => ({ ...detail, dns_providers: [] }),
     })
-    const workspace = createCertificateWorkspace(data, createPage(data))
+    const workspace = createCertificateWorkspace(data, createPage(data), vi.fn())
     await workspace.refresh()
     workspace.editPolicy()
     expect(workspace.form.open).toBe(false)

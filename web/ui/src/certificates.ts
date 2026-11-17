@@ -51,7 +51,11 @@ type DomainView = {
   delegations: { name: string; target: string }[]
 }
 
-export function createCertificateWorkspace(data: PageData, page: PageContext) {
+export function createCertificateWorkspace(
+  data: PageData,
+  page: PageContext,
+  navigate: (path: string) => unknown,
+) {
   const state = reactive({
     busy: false,
     checking: false,
@@ -97,7 +101,7 @@ export function createCertificateWorkspace(data: PageData, page: PageContext) {
           csrf: page.csrf,
           body: { ...form.values, certificates: [] },
         })) as { name: string }
-        location.assign(`/domains/${encodeURIComponent(created.name)}`)
+        await navigate(`/domains/${encodeURIComponent(created.name)}`)
       },
     )
   }

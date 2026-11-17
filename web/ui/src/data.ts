@@ -43,7 +43,7 @@ export type PageData = {
   flash: { message: string; level: 'error' | 'success' } | null
 }
 
-export const pages = [
+export const pages: readonly string[] = [
   'mcp-consent',
   'login',
   'projects',

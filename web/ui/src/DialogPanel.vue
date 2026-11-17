@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import Button from '@oxeu/center-common/ui/Button.vue'
 import { computed, ref, watch, nextTick, useId, onBeforeUnmount } from 'vue'
-import { toastTarget } from './toast-host.ts'
+import { useToastHost } from '@oxeu/center-common/ui/toast-host.ts'
+const toastHost = useToastHost()
+let detachToasts = () => {}
 import DropdownSelect from '@oxeu/center-common/ui/DropdownSelect.vue'
 import CheckboxField from '@oxeu/center-common/ui/CheckboxField.vue'
 const formId = useId()
@@ -29,7 +31,7 @@ watch(
     await nextTick()
     if (open && dialog.value) {
       dialog.value.showModal()
-      toastTarget.value = dialog.value
+      detachToasts = toastHost.attach(dialog.value)
     } else {
       releaseToasts()
       dialog.value?.close()
@@ -38,7 +40,7 @@ watch(
   { immediate: true },
 )
 function releaseToasts() {
-  if (toastTarget.value === dialog.value) toastTarget.value = 'body'
+  detachToasts()
 }
 onBeforeUnmount(releaseToasts)
 function cancel(event: Event) {

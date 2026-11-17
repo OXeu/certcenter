@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Button from '@oxeu/center-common/ui/Button.vue'
+import { useRouter } from 'vue-router'
 import NavigationLink from '@oxeu/center-common/ui/NavigationLink.vue'
 import { computed, onMounted, onUnmounted } from 'vue'
 import DialogPanel from './DialogPanel.vue'
@@ -10,6 +11,7 @@ import type { PageContext } from './page.ts'
 
 const props = defineProps<{ data: PageData; page: PageContext }>()
 const { msg } = props.page
+const router = useRouter()
 const {
   state,
   form,
@@ -23,7 +25,7 @@ const {
   checkDelegations,
   delegationStatus,
   providerLabel,
-} = createCertificateWorkspace(props.data, props.page)
+} = createCertificateWorkspace(props.data, props.page, (path) => router.push(path))
 const isDomains = computed(() => props.data.page === 'domains')
 const policies = computed(() => state.detail?.domain.certificates ?? [])
 const tabs = ['policies', 'history', 'logs']
