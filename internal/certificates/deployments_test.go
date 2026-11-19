@@ -3,6 +3,7 @@ package certificates
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -69,12 +70,14 @@ func TestCloudUpdateResumesWithoutUploadingAgain(t *testing.T) {
 	settings.providers.Upstreams["tencent"] = certconfig.Upstream{Kind: "tencentcloud", UpdateResources: true, DeleteOld: true}
 	cloud := &updatingUpstream{}
 	s.Upstream = cloud
+	now := time.Now()
+	issuer.material = testMaterial(t, []string{"example.com", "*.example.com", "WWW.example.com"}, now.Add(-time.Hour), now.Add(90*24*time.Hour))
 	s.execute(t.Context(), issueJob(t, s, st))
 	old, err := st.LatestCertificate(t.Context(), "example.com", "wildcard")
 	if err != nil {
 		t.Fatal(err)
 	}
-	issuer.material = testMaterial(t, old.Names, time.Now().Add(-time.Minute), time.Now().Add(90*24*time.Hour))
+	issuer.material = testMaterial(t, []string{"example.com", "*.example.com"}, now.Add(-time.Minute), now.Add(90*24*time.Hour))
 	job := issueJob(t, s, st)
 	s.execute(t.Context(), job)
 	if cloud.uploads != 2 || cloud.updates != 1 {
@@ -177,16 +180,28 @@ func TestFailedCloudUpdateRetriesTheSavedUpload(t *testing.T) {
 func TestResourceUpdateRejectsReducedNames(t *testing.T) {
 	s, settings, issuer, _, st := testService(t)
 	settings.domain.Certificates[0].Upstreams = []string{"tencent"}
-	settings.providers.Upstreams["tencent"] = certconfig.Upstream{Kind: "tencentcloud", UpdateResources: true, DeleteOld: true}
+	settings.providers.Upstreams["tencent"] = certconfig.Upstream{Kind: "tencentcloud"}
 	cloud := &updatingUpstream{}
 	s.Upstream = cloud
 	s.execute(t.Context(), issueJob(t, s, st))
+	older, err := st.LatestCertificate(t.Context(), "example.com", "wildcard")
+	if err != nil {
+		t.Fatal(err)
+	}
 	settings.domain.Certificates[0].Names = []string{"example.com"}
-	issuer.material = testMaterial(t, []string{"example.com"}, time.Now().Add(-time.Minute), time.Now().Add(90*24*time.Hour))
-	if err := s.Process(t.Context(), issueJob(t, s, st)); err == nil {
-		t.Fatal("replaced wildcard bindings with a narrower certificate")
+	now := time.Now()
+	issuer.material = testMaterial(t, []string{"example.com"}, now.Add(-time.Minute), now.Add(90*24*time.Hour))
+	s.execute(t.Context(), issueJob(t, s, st))
+	if cloud.uploads != 2 {
+		t.Fatal("expected two prior deployments")
+	}
+	settings.providers.Upstreams["tencent"] = certconfig.Upstream{Kind: "tencentcloud", UpdateResources: true, DeleteOld: true}
+	issuer.material = testMaterial(t, []string{"example.com"}, now.Add(-time.Minute), now.Add(90*24*time.Hour))
+	err = s.Process(t.Context(), issueJob(t, s, st))
+	if err == nil || !strings.Contains(err.Error(), older.Fingerprint) || !strings.Contains(err.Error(), "*.example.com") {
+		t.Fatalf("expected the blocked replacement to identify the old certificate and missing wildcard, got %v", err)
 	}
 	if cloud.updates != 0 {
-		t.Fatal("unsafe cloud replacement started")
+		t.Fatal("cloud replacement started before all old certificates were checked")
 	}
 }

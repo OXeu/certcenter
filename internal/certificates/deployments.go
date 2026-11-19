@@ -2,9 +2,11 @@ package certificates
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/OXeu/certcenter/internal/certconfig"
@@ -110,6 +112,9 @@ func (s *Service) updateResources(ctx context.Context, job store.CertificateJob,
 	if err != nil {
 		return fmt.Errorf("load previous cloud certificates: %w", err)
 	}
+	if err := checkReplacementNames(cert, receipt.RemoteID, previous); err != nil {
+		return err
+	}
 	updates, err := s.Store.CloudUpdates(ctx, cert.ID)
 	if err != nil {
 		return fmt.Errorf("load cloud update checkpoints: %w", err)
@@ -120,9 +125,6 @@ func (s *Service) updateResources(ctx context.Context, job store.CertificateJob,
 			continue
 		}
 		seen[old.RemoteID] = true
-		if !matchesPolicy(cert, certconfig.Policy{Names: old.Names}) {
-			return errors.New("new certificate does not cover all names of an older deployed certificate; cloud resources were retained")
-		}
 		checkpoint := store.CloudUpdate{CertificateID: cert.ID, Target: receipt.Target, Revision: receipt.Revision, OldRemoteID: old.RemoteID}
 		for _, saved := range updates {
 			if saved.Target == receipt.Target && saved.Revision == receipt.Revision && saved.OldRemoteID == old.RemoteID {
@@ -158,6 +160,25 @@ func (s *Service) updateResources(ctx context.Context, job store.CertificateJob,
 			return fmt.Errorf("update cloud resources: %w", updateErr)
 		}
 		return errCloudPending
+	}
+	return nil
+}
+
+func checkReplacementNames(cert store.Certificate, remoteID string, previous []store.DeployedCertificate) error {
+	leaf := x509.Certificate{DNSNames: cert.Names}
+	for _, old := range previous {
+		if old.RemoteID == remoteID {
+			continue
+		}
+		var missing []string
+		for _, name := range old.Names {
+			if err := leaf.VerifyHostname(name); err != nil {
+				missing = append(missing, name)
+			}
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("cannot replace cloud certificate %s with %s: new certificate does not cover %s", old.RemoteID, remoteID, strings.Join(missing, ", "))
+		}
 	}
 	return nil
 }
