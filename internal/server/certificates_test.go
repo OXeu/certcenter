@@ -17,8 +17,8 @@ import (
 	"github.com/OXeu/certcenter/internal/certconfig"
 	"github.com/OXeu/certcenter/internal/certificates"
 	"github.com/OXeu/certcenter/internal/config"
-	"github.com/OXeu/certcenter/internal/configcenter"
 	"github.com/OXeu/certcenter/internal/store"
+	"github.com/OXeu/configcenter/sdk/configcenter"
 )
 
 type unavailableCertificateQueue struct {

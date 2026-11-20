@@ -16,7 +16,7 @@ import (
 
 	"github.com/OXeu/certcenter/internal/auth"
 	"github.com/OXeu/certcenter/internal/certconfig"
-	"github.com/OXeu/certcenter/internal/configcenter"
+	"github.com/OXeu/configcenter/sdk/configcenter"
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 )
@@ -34,7 +34,12 @@ func LoadRemote(ctx context.Context) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	client, err := configcenter.New(configcenter.Config{BaseURL: baseURL, APIKey: apiKey, Environment: lookupOr(lookup, "CC_CONFIGCENTER_ENVIRONMENT", "production"), LocalPath: lookupOr(lookup, "CC_CONFIGCENTER_LOCAL_PATH", ".tmp/certcenter-config.kv")})
+	client, err := configcenter.New(configcenter.Config{
+		BaseURL:     baseURL,
+		APIKey:      apiKey,
+		Environment: lookupOr(lookup, "CC_CONFIGCENTER_ENVIRONMENT", "production"),
+		CacheFile:   lookupOr(lookup, "CC_CONFIGCENTER_LOCAL_PATH", ".tmp/certcenter-config.json"),
+	})
 	if err != nil {
 		return Config{}, fmt.Errorf("configure settings storage using CC_CONFIGCENTER_URL, CC_CONFIGCENTER_API_KEY and CC_CONFIGCENTER_LOCAL_PATH: %w", err)
 	}

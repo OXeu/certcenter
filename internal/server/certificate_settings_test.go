@@ -14,7 +14,7 @@ import (
 	"github.com/OXeu/certcenter/internal/auth"
 	"github.com/OXeu/certcenter/internal/certconfig"
 	"github.com/OXeu/certcenter/internal/config"
-	"github.com/OXeu/certcenter/internal/configcenter"
+	"github.com/OXeu/configcenter/sdk/configcenter"
 )
 
 func settingsFlows(t *testing.T, local bool) (*flows, *Server) {
@@ -32,7 +32,7 @@ func settingsFlows(t *testing.T, local bool) (*flows, *Server) {
 				t.Error(err)
 			}
 		})
-		client, err := configcenter.New(configcenter.Config{LocalPath: filepath.Join(directory, "settings.kv")})
+		client, err := configcenter.New(configcenter.Config{DotenvFiles: []string{}, CacheFile: filepath.Join(directory, "settings.json")})
 		if err != nil {
 			t.Fatal(err)
 		}

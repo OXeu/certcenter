@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/OXeu/certcenter/internal/configcenter"
+	"github.com/OXeu/configcenter/sdk/configcenter"
 )
 
 // ErrMissing indicates a missing remote configuration record.

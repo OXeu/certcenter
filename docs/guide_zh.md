@@ -4,7 +4,7 @@
 
 ## 本地模式
 
-未填写 ConfigCenter 连接参数时，服务将设置保存到 `.tmp/certcenter-config.kv`，应用数据保存到 `.tmp/certcenter.db`，首次初始化设置时生成加密密钥。保留业务数据时，也应保留配置存储和其中的加密密钥。默认监听 `127.0.0.1:8081`，公网地址默认为 `http://127.0.0.1:8081`。
+未填写 ConfigCenter 连接参数时，服务将设置保存到 `.tmp/certcenter-config.json`，应用数据保存到 `.tmp/certcenter.db`，首次初始化设置时生成加密密钥。保留业务数据时，也应保留配置存储和其中的加密密钥。默认监听 `127.0.0.1:8081`，公网地址默认为 `http://127.0.0.1:8081`。
 
 默认没有 OAuth 提供商，首次启动可打开登录页但不能登录。需要通过下述远程配置流程准备身份提供商和证书参数。
 
@@ -18,7 +18,7 @@
 | `CC_CONFIGCENTER_URL`         | ConfigCenter 地址；与 API 密钥同时省略时使用本地模式 |
 | `CC_CONFIGCENTER_API_KEY`     | 指定项目范围的 ConfigCenter 密钥                     |
 | `CC_CONFIGCENTER_ENVIRONMENT` | 配置环境，默认 `production`                          |
-| `CC_CONFIGCENTER_LOCAL_PATH`  | 本地设置文件，默认 `.tmp/certcenter-config.kv`       |
+| `CC_CONFIGCENTER_LOCAL_PATH`  | 本地设置文件，默认 `.tmp/certcenter-config.json`     |
 
 监听地址、数据库、OAuth 和加密密钥均来自配置存储，不通过任意 `CC_ADDR`、`CC_DB` 环境变量覆盖。
 

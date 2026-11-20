@@ -14,7 +14,7 @@ Rules for anyone (human or model) changing certcenter. They are enforced where a
 - `center-common/oauth` — the shared RFC 6749 + OIDC client (discovery, PKCE, id_token verification, userinfo fallback).
 - `internal/server` — gin router, REST handlers, MCP endpoint, Go templates (`templates/shell/vue.html`), embedded static files.
 - `web/ui` — Vue 3 single-file components and Tailwind CSS; Vite Plus builds into `.tmp/ui`, embedded by root `assets.go`.
-- `internal/configcenter` — internal ConfigCenter transport and local KV adapter.
+- `github.com/OXeu/configcenter/sdk/configcenter` — the published ConfigCenter Go module; never copy it into this repository.
 - `.github/commits.md` — the commit message rules (Conventional Commits 1.0.0 plus this repository's constraints).
 
 ## Commits
@@ -105,11 +105,11 @@ Keep component-local state and readonly configuration local. Declare necessary a
 - `go test ./...` — OAuth login through a fake identity provider, project isolation, CSRF.
 - `npm test` — Vitest and Vue Test Utils with jsdom cover dialogs, requests, permissions, translations, toast setup and template rules.
 - `internal/server/e2e_test.go` renders every page, logs in through a fake IdP and proves a key of one project cannot reach another. Its `TestMain` (`scratch_test.go`) points `TMPDIR` at `.tmp/go-test` so `go test` run directly, without `make`, also keeps its scratch files in the workspace.
-- Relational test databases use `mode=memory`. Internal configuration KV tests use isolated bbolt files under the repository root `.tmp/` and clean them up; no database is written into a package directory.
+- Relational test databases use `mode=memory`. Configuration snapshot files live under the repository root `.tmp/` and are cleaned up; no database is written into a package directory.
 
 ## Definition of done
 
-`make check` passes: Vite Plus production build, Go lint and tests, Oxlint, strict Vue type checks, Vitest, and internal configuration client tests. `make build` produces `.tmp/bin/certcenter`. Commit working changes according to `.github/commits.md` and finish with a clean `git status`. Build artifacts remain ignored under `.tmp/`.
+`make check` passes: Vite Plus production build, Go lint and tests, Oxlint, strict Vue type checks, Vitest. `make build` produces `.tmp/bin/certcenter`. Commit working changes according to `.github/commits.md` and finish with a clean `git status`. Build artifacts remain ignored under `.tmp/`.
 
 ## Dangerous UI actions
 

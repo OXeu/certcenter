@@ -44,7 +44,7 @@ make build
 ./.tmp/bin/certcenter
 ```
 
-打开 http://127.0.0.1:8081。默认创建 `.tmp/certcenter.db` 和 `.tmp/certcenter-config.kv`，并生成加密密钥。保留应用数据时也必须持久保存配置存储。
+打开 http://127.0.0.1:8081。默认创建 `.tmp/certcenter.db` 和 `.tmp/certcenter-config.json`，并生成加密密钥。保留应用数据时也必须持久保存配置存储。
 
 ### 启用证书管理
 

@@ -4,11 +4,12 @@ go 1.26.10
 
 require (
 	github.com/OXeu/center-common v0.0.0
+	github.com/OXeu/configcenter/sdk/configcenter v0.0.0-20261120095845-5f8c839260d1
 	github.com/gin-gonic/gin v1.12.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/joho/godotenv v1.5.1
-	golang.org/x/oauth2 v0.38.0
+	golang.org/x/oauth2 v0.38.0 // indirect
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/gorm v1.31.2
 )
@@ -80,7 +81,6 @@ require (
 	github.com/pkg/sftp v1.13.12
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.206
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.3.206
-	go.etcd.io/bbolt v1.5.0
 	golang.org/x/crypto v0.54.0
 )
 

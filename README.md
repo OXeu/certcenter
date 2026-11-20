@@ -44,7 +44,7 @@ make build
 ./.tmp/bin/certcenter
 ```
 
-Open http://127.0.0.1:8081. The defaults create `.tmp/certcenter.db` and `.tmp/certcenter-config.kv`, including a generated encryption key. Preserve the configuration store when retaining application data.
+Open http://127.0.0.1:8081. The defaults create `.tmp/certcenter.db` and `.tmp/certcenter-config.json`, including a generated encryption key. Preserve the configuration store when retaining application data.
 
 ### Enable certificate management
 

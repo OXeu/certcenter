@@ -4,7 +4,7 @@ CertCenter manages domains, ACME certificate policies, issuance, renewal and ups
 
 ## Local mode
 
-Without ConfigCenter connection parameters, the service initializes persistent settings in `.tmp/certcenter-config.kv` and application data in `.tmp/certcenter.db`. It generates an encryption key when initializing settings. Preserve this key and the settings store alongside application data. The default listener and public URL are `127.0.0.1:8081` and `http://127.0.0.1:8081`.
+Without ConfigCenter connection parameters, the service initializes persistent settings in `.tmp/certcenter-config.json` and application data in `.tmp/certcenter.db`. It generates an encryption key when initializing settings. Preserve this key and the settings store alongside application data. The default listener and public URL are `127.0.0.1:8081` and `http://127.0.0.1:8081`.
 
 The default OAuth provider is empty, so the first local launch serves the login page without enabling sign-in. Use the remote configuration flow below to prepare a usable identity provider and certificate settings.
 
@@ -18,7 +18,7 @@ Only these bootstrap values are read from the environment or optional `.env.loca
 | `CC_CONFIGCENTER_URL`         | ConfigCenter base URL; omit both URL and API key for local mode |
 | `CC_CONFIGCENTER_API_KEY`     | Project-scoped ConfigCenter key                                 |
 | `CC_CONFIGCENTER_ENVIRONMENT` | Environment; defaults to `production`                           |
-| `CC_CONFIGCENTER_LOCAL_PATH`  | Local settings file; defaults to `.tmp/certcenter-config.kv`    |
+| `CC_CONFIGCENTER_LOCAL_PATH`  | Local settings file; defaults to `.tmp/certcenter-config.json`  |
 
 Server settings such as the listener, database, OAuth provider and encryption key are stored settings, not arbitrary `CC_ADDR` or `CC_DB` environment overrides.
 

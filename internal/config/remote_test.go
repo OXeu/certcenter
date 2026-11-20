@@ -12,7 +12,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/OXeu/certcenter/internal/configcenter"
+	"github.com/OXeu/configcenter/sdk/configcenter"
 )
 
 func TestRemoteSettingsOverrideAllLocalOperationalVariables(t *testing.T) {
@@ -151,7 +151,7 @@ func localSettingsPath(t *testing.T) string {
 	t.Setenv("CC_CONFIGCENTER_URL", "")
 	t.Setenv("CC_CONFIGCENTER_API_KEY", "")
 	t.Setenv("CC_CONFIGCENTER_ENVIRONMENT", "production")
-	path := filepath.Join(directory, "config.kv")
+	path := filepath.Join(directory, "config.json")
 	t.Setenv("CC_CONFIGCENTER_LOCAL_PATH", path)
 	return path
 }
