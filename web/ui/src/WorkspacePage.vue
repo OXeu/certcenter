@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Button from '@oxeu/center-common/ui/Button.vue'
+import DropdownMenu from '@oxeu/center-common/ui/DropdownMenu.vue'
 import NavigationLink from '@oxeu/center-common/ui/NavigationLink.vue'
 import { computed, defineAsyncComponent, onMounted } from 'vue'
 import DangerActions from './DangerActions.vue'
@@ -14,8 +15,21 @@ const props = defineProps({
 const data = props.data as import('./data.ts').PageData
 const page = props.page as import('./page.ts').PageContext
 const { msg } = page
-const { state, form, refresh, select, edit, toggleView, actionsFor, environment, newEnvironment } =
-  createWorkspace(data, page)
+const {
+  state,
+  form,
+  refresh,
+  select,
+  edit,
+  editChoices,
+  choose,
+  toggleView,
+  actionsFor,
+  environment,
+  newEnvironment,
+} = createWorkspace(data, page)
+const choiceEditor = computed(() => ['settings', 'users'].includes(data.page))
+const environmentLabel = computed(() => `${msg('projects.environment')}: ${state.env}`)
 const canCreate = computed(
   () =>
     data.canWrite && data.page !== 'users' && data.page !== 'settings' && state.tab !== 'proposals',
@@ -96,9 +110,21 @@ onMounted(refresh)
       >
         {{ msg(`projects.${tab}`) }}
       </Button>
-      <Button :disabled="state.busy" @click="environment" variant="secondary">
-        {{ msg('projects.environment') }}: {{ state.env }}
-      </Button>
+      <DropdownMenu :disabled="state.busy" :label="environmentLabel">
+        <Button
+          v-for="env in state.environments"
+          :key="env.slug"
+          :aria-pressed="state.env === env.slug"
+          :data-active="state.env === env.slug"
+          :disabled="state.busy"
+          @click="environment(env.slug)"
+          variant="ghost"
+          block
+          align="start"
+        >
+          {{ env.name }} ({{ env.slug }})
+        </Button>
+      </DropdownMenu>
       <Button
         v-if="data.canWrite"
         :disabled="state.busy"
@@ -141,7 +167,27 @@ onMounted(refresh)
             <span v-else class="whitespace-pre-wrap break-all">{{ cell(row, column) }}</span>
           </td>
           <td v-if="data.canWrite || data.isAdmin" :data-label="msg('common.actions')">
-            <Button v-if="!reviewing" :disabled="state.busy" @click="edit(row)" variant="ghost">
+            <DropdownMenu v-if="choiceEditor" :disabled="state.busy" :label="msg('common.edit')">
+              <Button
+                v-for="choice in editChoices(row)"
+                :key="choice.value"
+                :aria-pressed="choice.selected"
+                :data-active="choice.selected"
+                :disabled="state.busy"
+                @click="choose(row, choice.value)"
+                variant="ghost"
+                block
+                align="start"
+              >
+                {{ choice.label }}
+              </Button>
+            </DropdownMenu>
+            <Button
+              v-else-if="!reviewing"
+              :disabled="state.busy"
+              @click="edit(row)"
+              variant="ghost"
+            >
               {{ msg('common.edit') }}
             </Button>
             <DangerActions

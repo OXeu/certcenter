@@ -104,14 +104,6 @@ export function createWorkspace(
     state.rows = []
     await refresh()
   }
-  const roles = () => ({
-    key: 'role',
-    label: 'dialog.role',
-    options: ['user', 'admin'].map((value) => ({
-      value,
-      label: page.msg(`role.${value}`),
-    })),
-  })
   /** @param {string} url @param {string} method @param {unknown} [body] */
   async function mutate(url: string, method: string, body?: unknown) {
     const result = await api(url, { method, body, csrf: page.csrf })
@@ -120,27 +112,37 @@ export function createWorkspace(
     return result
   }
   /** @param {any} [row] */
+  function editChoices(row: any) {
+    if (data.page === 'settings')
+      return ['true', 'false'].map((value) => ({
+        value,
+        label: page.msg(value === 'true' ? 'settings.allowed' : 'settings.closed'),
+        selected: String(row.value) === value,
+      }))
+    return ['user', 'admin'].map((value) => ({
+      value,
+      label: page.msg(`role.${value}`),
+      selected: row.role === value,
+    }))
+  }
+  function choose(row: any, value: string) {
+    if (state.busy || !['settings', 'users'].includes(data.page)) return
+    const choice = editChoices(row).find((option) => option.value === value)
+    if (!choice || choice.selected) return
+    const target = data.page === 'settings' ? page.msg('settings.registration') : row.email
+    form.show(
+      `${target}: ${choice.label}`,
+      [],
+      {},
+      async () => {
+        if (data.page === 'settings')
+          await mutate(path(), 'PUT', { allow_registration: value === 'true' })
+        else await mutate(path() + '/' + row.id, 'PATCH', { role: value })
+      },
+    )
+  }
   function edit(row?: any) {
-    if (data.page === 'settings') {
-      form.show(
-        page.msg('common.edit'),
-        [
-          {
-            key: 'allowed',
-            label: 'settings.registration',
-            options: [
-              { value: 'true', label: page.msg('settings.allowed') },
-              { value: 'false', label: page.msg('settings.closed') },
-            ],
-          },
-        ],
-        { allowed: String(row.value) },
-        async () => {
-          await mutate(path(), 'PUT', { allow_registration: form.values.allowed === 'true' })
-        },
-      )
-      return
-    }
+    if (['settings', 'users'].includes(data.page)) return
     if (state.tab === 'keys') {
       editKey(row)
       return
@@ -161,11 +163,6 @@ export function createWorkspace(
         url += '/' + enc(row.slug)
         method = 'PATCH'
       }
-    } else if (data.page === 'users') {
-      fields = [roles()]
-      values = { role: row.role }
-      url += '/' + row.id
-      method = 'PATCH'
     } else {
       fields = [
         field('key', 'dialog.itemKey'),
@@ -278,24 +275,12 @@ export function createWorkspace(
     if (state.tab === 'keys') return [rotation(row), removal(row)]
     return [removal(row)]
   }
-  /** @returns {void} */
-  function environment(): void {
-    form.show(
-      page.msg('projects.environment'),
-      [
-        {
-          key: 'env',
-          label: 'projects.environment',
-          options: state.environments.map((e) => ({ value: e.slug, label: e.name })),
-        },
-      ],
-      { env: state.env },
-      async () => {
-        state.env = form.values.env
-        state.rows = []
-        await load()
-      },
-    )
+  /** @returns {Promise<void>} */
+  async function environment(slug: string): Promise<void> {
+    if (state.busy || state.env === slug || !state.environments.some((e) => e.slug === slug)) return
+    state.env = slug
+    state.rows = []
+    await load()
   }
   /** @returns {void} */
   function newEnvironment(): void {
@@ -319,6 +304,8 @@ export function createWorkspace(
     remove,
     review,
     environment,
+    editChoices,
+    choose,
     newEnvironment,
   }
 }

@@ -88,18 +88,55 @@ describe('workspace mutations', () => {
   })
   it('changes environment before requesting its items', async () => {
     const w = createWorkspace(data, createPage(data))
-    w.environment()
-    w.form.values.env = 'staging'
-    await w.form.submit()
-    expect(fetchMock.mock.calls[1][0]).toContain('/environments/staging/items')
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ environments: [{ slug: 'staging', name: 'Staging' }] }),
+    })
+    await w.refresh()
+    fetchMock.mockClear()
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ items: [] }),
+    })
+    await w.environment('staging')
+    expect(w.state.env).toBe('staging')
+    const requested = fetchMock.mock.calls.map(([url]) => String(url))
+    expect(requested).toContain('/api/v1/projects/billing/environments/staging/items')
   })
-  it('updates user roles through the admin API', async () => {
+  it('ignores unknown or unchanged environments', async () => {
+    const w = createWorkspace(data, createPage(data))
+    fetchMock.mockClear()
+    await w.environment('missing')
+    await w.environment(data.env)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+  it('updates user roles through the admin API after confirmation', async () => {
     const w = createWorkspace({ ...data, page: 'users' }, createPage(data))
-    w.edit({ id: 9, role: 'user' })
-    w.form.values.role = 'admin'
+    const row = { id: 9, role: 'user', email: 'user@example.com' }
+    expect(w.editChoices(row).map((choice) => choice.selected)).toEqual([true, false])
+    w.choose(row, 'user')
+    expect(fetchMock).not.toHaveBeenCalled()
+    w.choose(row, 'admin')
+    expect(w.form.fields).toEqual([])
+    expect(fetchMock).not.toHaveBeenCalled()
     await w.form.submit()
     expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/users/9')
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'PATCH', body: '{"role":"admin"}' })
+  })
+  it('toggles registration only when the choice changes', async () => {
+    const w = createWorkspace({ ...data, page: 'settings' }, createPage(data))
+    const row = { key: 'allow_registration', value: 'false' }
+    w.choose(row, 'false')
+    expect(fetchMock).not.toHaveBeenCalled()
+    w.choose(row, 'true')
+    await w.form.submit()
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/settings')
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: 'PUT',
+      body: '{"allow_registration":true}',
+    })
   })
   it('accepts empty successful deletion responses', async () => {
     fetchMock.mockResolvedValueOnce({ ok: true, status: 204 })
