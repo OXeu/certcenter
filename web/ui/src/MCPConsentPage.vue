@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Button from '@oxeu/center-common/ui/Button.vue'
+import ConsentCard from '@oxeu/center-common/ui/ConsentCard.vue'
 import { navigateDocument } from '@oxeu/center-common/ui/navigation.ts'
 import { computed, ref } from 'vue'
 import { api } from './core.ts'
@@ -13,6 +13,16 @@ const { msg } = props.page
 const consent = computed(() => props.data.consent)
 const form = createForm(props.page)
 const busy = ref(false)
+const requestTitle = computed(() =>
+  consent.value ? msg('mcp.request', { Client: consent.value.client }) : '',
+)
+const details = computed(() => {
+  if (!consent.value) return []
+  return [
+    { label: msg('mcp.resource'), value: consent.value.resource },
+    { label: msg('mcp.redirect'), value: consent.value.redirectUri },
+  ]
+})
 
 async function decide(approve: boolean) {
   if (busy.value || !consent.value) return
@@ -42,23 +52,16 @@ async function deny() {
 }
 </script>
 <template>
-  <section v-if="consent" class="card mt-4 space-y-4">
-    <p>{{ msg('mcp.request', { Client: consent.client }) }}</p>
-    <p class="text-sm text-muted-foreground">{{ msg('mcp.permissions') }}</p>
-    <dl class="space-y-2 break-all text-sm">
-      <dt class="font-medium">{{ msg('mcp.resource') }}</dt>
-      <dd>{{ consent.resource }}</dd>
-      <dt class="font-medium">{{ msg('mcp.redirect') }}</dt>
-      <dd>{{ consent.redirectUri }}</dd>
-    </dl>
-    <div class="flex gap-2">
-      <Button type="button" :disabled="busy" @click="authorize" variant="primary">
-        {{ msg('mcp.authorize') }}
-      </Button>
-      <Button type="button" :disabled="busy" @click="deny" variant="secondary">
-        {{ msg('mcp.deny') }}
-      </Button>
-    </div>
-  </section>
+  <ConsentCard
+    v-if="consent"
+    :title="requestTitle"
+    :description="msg('mcp.permissions')"
+    :details="details"
+    :allow-label="msg('mcp.authorize')"
+    :deny-label="msg('mcp.deny')"
+    :busy="busy"
+    @allow="authorize"
+    @deny="deny"
+  />
   <DialogPanel v-if="form.open" :form="form" :msg="msg" />
 </template>
